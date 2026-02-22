@@ -70,7 +70,7 @@ const Login = () => {
             <div style={styles.field}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <label style={styles.label}>Mot de passe</label>
-                <span style={styles.forgotLink}>Mot de passe oublié ?</span>
+                <Link to={'/forgot-password?email=' + encodeURIComponent(loginInfo.email)} style={{ ...styles.forgotLink, textDecoration: 'none' }}>Mot de passe oublié ?</Link>
               </div>
               <div style={styles.inputWrapper}>
                 <span style={styles.inputIcon}>🔒</span>
@@ -109,15 +109,9 @@ const Login = () => {
               )}
             </button>
 
-            <div style={styles.divider}>
-              <span style={styles.dividerLine} />
-              <span style={styles.dividerText}>ou</span>
-              <span style={styles.dividerLine} />
-            </div>
+            
 
-            <button type="button" style={styles.googleBtn}>
-              <span>📱</span> Continuer avec Google
-            </button>
+            
 
             <p style={styles.registerLink}>
               Pas encore de compte ?{" "}
