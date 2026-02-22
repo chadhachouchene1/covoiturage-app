@@ -19,7 +19,7 @@ const Login = () => {
             <div style={styles.logoRow}>
               <span style={{ fontSize: 32 }}>🚗</span>
             </div>
-            <h1 style={styles.brandName}>CoVoiturage</h1>
+            <h1 style={styles.brandName}>Tawsila</h1>
             <p style={styles.brandTagline}>Partagez la route,<br />partagez les coûts.</p>
 
             <div style={styles.stats}>

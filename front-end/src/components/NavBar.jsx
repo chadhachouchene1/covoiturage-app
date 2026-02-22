@@ -288,7 +288,7 @@ const NavBar = () => {
           {/* Brand */}
           <Link to="/" className="nav-brand">
             <div className="nav-brand-icon">🚗</div>
-            <span className="nav-brand-text">CoVoiturage</span>
+            <span className="nav-brand-text">Tawsila</span>
           </Link>
 
           {/* Right side */}
