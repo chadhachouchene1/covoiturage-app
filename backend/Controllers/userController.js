@@ -34,30 +34,18 @@ const createToken = (_id) => {
 // ─── SEND OTP ─────────────────────────────────────────────────────────────────
 const sendOTP = async (req, res) => {
   try {
-    const { email, phone, firstName } = req.body;
-    if (!email || !firstName || !phone) {
-      return res.status(400).json({ message: "Email, téléphone et prénom requis" });
+    const { email, firstName } = req.body;
+    if (!email || !firstName) {
+      return res.status(400).json({ message: "Email et prénom requis" });
     }
     if (!validator.isEmail(email)) {
       return res.status(400).json({ message: "Format email invalide" });
     }
-
-    // ✅ Vérification AVANT d'envoyer l'OTP
-    const existingEmail = await userModel.findOne({ email });
-    if (existingEmail) {
-      return res.status(409).json({ message: "Cet email est déjà associé à un compte" });
-    }
-
-    const existingPhone = await userModel.findOne({ phone });
-    if (existingPhone) {
-      return res.status(409).json({ message: "Ce numéro de téléphone est déjà utilisé" });
-    }
-
     await sendOTPEmail(email, firstName);
     res.status(200).json({ message: "Code envoyé sur votre email ✅" });
   } catch (error) {
     console.error("SendOTP Error:", error);
-    res.status(500).json({ message: "Erreur envoi email." });
+    res.status(500).json({ message: "Erreur envoi email. Vérifiez votre configuration." });
   }
 };
 
@@ -77,32 +65,29 @@ const checkOTP = async (req, res) => {
 // ─── REGISTER ─────────────────────────────────────────────────────────────────
 const registerUser = async (req, res) => {
   try {
-    const { firstName, lastName, dateOfBirth, birthPlace, email, phone, password } = req.body;
+    const { firstName, lastName, dateOfBirth, birthPlace, email, phone, password, confirmPassword } = req.body;
 
-    // ── Champs obligatoires ──
     if (!firstName || !lastName || !dateOfBirth || !birthPlace || !email || !phone || !password) {
       return res.status(400).json({ message: "Tous les champs sont obligatoires" });
     }
-
-    // ── Vérification âge >= 18 ──
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ message: "Format email invalide" });
+    }
+    if (!validator.isMobilePhone(phone, "any")) {
+      return res.status(400).json({ message: "Numéro de téléphone invalide" });
+    }
     const dob = new Date(dateOfBirth);
     const age = Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 3600 * 1000));
     if (age < 18) {
       return res.status(400).json({ message: "Vous devez avoir au moins 18 ans" });
     }
 
-    // ── Hash mot de passe ──
     const hashedPassword = await bcrypt.hash(password, 10);
     const imagePath = req.file ? `/uploads/${req.file.filename}` : "";
 
-    // ── Créer l'utilisateur ──
     const newUser = await userModel.create({
-      firstName,
-      lastName,
-      dateOfBirth,
-      birthPlace,
-      email,
-      phone,
+      firstName, lastName, dateOfBirth, birthPlace,
+      email, phone,
       password: hashedPassword,
       image: imagePath,
       acceptedRules: true,
@@ -123,7 +108,6 @@ const registerUser = async (req, res) => {
       },
       token,
     });
-
   } catch (error) {
     console.error("Register Error:", error);
     res.status(500).json({ message: "Erreur serveur" });
@@ -183,4 +167,46 @@ const getUsers = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, findUser, getUsers, upload, sendOTP, checkOTP };
+// ─── FORGOT PASSWORD — Envoyer OTP reset ─────────────────────────────────────
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email requis" });
+    if (!validator.isEmail(email)) return res.status(400).json({ message: "Format email invalide" });
+
+    // Vérifier que l'email existe en base
+    const user = await userModel.findOne({ email });
+    if (!user) return res.status(404).json({ message: "Aucun compte associé à cet email" });
+
+    // Envoyer OTP
+    await sendOTPEmail(email, user.firstName);
+    res.status(200).json({ message: "Code de réinitialisation envoyé ✅" });
+  } catch (error) {
+    console.error("ForgotPassword Error:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+
+// ─── RESET PASSWORD — Changer le mot de passe ────────────────────────────────
+const resetPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: "Email et nouveau mot de passe requis" });
+    }
+
+    if (!validator.isStrongPassword(newPassword, { minLength: 6 })) {
+      return res.status(400).json({ message: "Mot de passe trop faible" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await userModel.findOneAndUpdate({ email }, { password: hashedPassword });
+
+    res.status(200).json({ message: "Mot de passe réinitialisé avec succès ✅" });
+  } catch (error) {
+    console.error("ResetPassword Error:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+
+module.exports = { registerUser, loginUser, findUser, getUsers, upload, sendOTP, checkOTP, forgotPassword, resetPassword };
