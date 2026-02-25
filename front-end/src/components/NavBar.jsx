@@ -99,7 +99,7 @@ const NavBar = () => {
         }
 
         .taw-nav-inner {
-          max-width: 1240px;
+          max-width: 1500px;
           margin: 0 auto;
           padding: 0 28px;
           height: 90px;

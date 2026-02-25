@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";  // ✅
+import { Link, useSearchParams } from "react-router-dom";
 import { baseUrl } from "../utils/services";
 
 const ForgotPassword = () => {
-  const [searchParams] = useSearchParams();  // ✅ ici une seule fois
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState(1);
-  const [email, setEmail] = useState(searchParams.get("email") || "");  // ✅
-  // ... reste du code
+  const [email, setEmail] = useState(searchParams.get("email") || "");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -14,7 +13,6 @@ const ForgotPassword = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  // ÉTAPE 1 — Envoyer OTP reset
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setError(null);
@@ -27,15 +25,14 @@ const ForgotPassword = () => {
       });
       const data = await res.json();
       setLoading(false);
-      if (!res.ok) return setError(data.message);
+      if (!res.ok) return setError(data.message || "Erreur lors de l'envoi");
       setStep(2);
     } catch {
       setLoading(false);
-      setError("Erreur réseau. Réessayez.");
+      setError("Erreur réseau. Vérifiez votre connexion.");
     }
   };
 
-  // ÉTAPE 2 — Vérifier OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError(null);
@@ -44,11 +41,11 @@ const ForgotPassword = () => {
       const res = await fetch(`${baseUrl}/users/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: otp }),
+        body: JSON.stringify({ email, code: otp.replace(/\s/g, "") }),
       });
       const data = await res.json();
       setLoading(false);
-      if (!res.ok) return setError(data.message);
+      if (!res.ok) return setError(data.message || "Code invalide");
       setStep(3);
     } catch {
       setLoading(false);
@@ -56,16 +53,13 @@ const ForgotPassword = () => {
     }
   };
 
-  // ÉTAPE 3 — Réinitialiser le mot de passe
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError(null);
-
     if (newPassword !== confirmPassword) return setError("Les mots de passe ne correspondent pas");
     if (newPassword.length < 6) return setError("Minimum 6 caractères");
-    if (!/[A-Z]/.test(newPassword)) return setError("Au moins une majuscule requise");
-    if (!/[0-9]/.test(newPassword)) return setError("Au moins un chiffre requis");
-
+    if (!/[A-Z]/.test(newPassword)) return setError("Au moins une majuscule");
+    if (!/[0-9]/.test(newPassword)) return setError("Au moins un chiffre");
     setLoading(true);
     try {
       const res = await fetch(`${baseUrl}/users/reset-password`, {
@@ -75,7 +69,7 @@ const ForgotPassword = () => {
       });
       const data = await res.json();
       setLoading(false);
-      if (!res.ok) return setError(data.message);
+      if (!res.ok) return setError(data.message || "Échec de la réinitialisation");
       setSuccess("Mot de passe modifié avec succès !");
     } catch {
       setLoading(false);
@@ -83,266 +77,554 @@ const ForgotPassword = () => {
     }
   };
 
-  const handleOtpInput = (e, index) => {
+  const handleOtpChange = (e, index) => {
     const val = e.target.value.replace(/\D/, "");
-    const arr = otp.padEnd(4, " ").split("");
-    arr[index] = val || " ";
-    const newCode = arr.join("").trimEnd();
-    setOtp(newCode);
-    if (val && e.target.nextSibling) e.target.nextSibling.focus();
-    if (!val && e.target.previousSibling) e.target.previousSibling.focus();
+    if (val.length > 1) return;
+    const newOtp = otp.split("");
+    newOtp[index] = val;
+    setOtp(newOtp.join(""));
+    if (val && index < 3) {
+      const nextInput = e.target.parentElement.children[index + 1];
+      if (nextInput) nextInput.focus();
+    }
+    if (!val && index > 0) {
+      const prevInput = e.target.parentElement.children[index - 1];
+      if (prevInput) prevInput.focus();
+    }
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        {/* Header */}
-        <div style={styles.header}>
-          <div style={styles.logo}>
-            <span>🚗</span>
-            <span style={styles.logoText}>CoVoiturage</span>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+        :root {
+          --navy:       #0d1f4e;
+          --navy-mid:   #1a3474;
+          --blue:       #2563eb;
+          --blue-light: #3b82f6;
+          --text:       #f1f5f9;
+          --text-muted: #94a3b8;
+          --radius:     14px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        .forgot-page {
+          min-height: 100dvh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          background:
+            radial-gradient(ellipse at 15% 25%, rgba(37,99,235,0.2) 0%, transparent 55%),
+            radial-gradient(ellipse at 85% 75%, rgba(13,31,78,0.5) 0%, transparent 60%),
+            linear-gradient(150deg, #0d1f4e 0%, #091533 100%);
+          position: relative;
+          overflow: hidden;
+        }
+
+        /* Dot grid like left panel */
+        .forgot-page::before {
+          content: '';
+          position: fixed;
+          inset: 0;
+          background-image: radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px);
+          background-size: 36px 36px;
+          pointer-events: none;
+        }
+
+        .forgot-card {
+          background: rgba(255,255,255,0.04);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(59,130,246,0.25);
+          border-radius: 20px;
+          width: 100%;
+          max-width: 480px;
+          overflow: hidden;
+          box-shadow:
+            0 0 0 1px rgba(37,99,235,0.1),
+            0 20px 60px rgba(0,0,0,0.5);
+          position: relative;
+          z-index: 1;
+          animation: fpFadeUp 0.5s cubic-bezier(0.16,1,0.3,1);
+        }
+
+        @keyframes fpFadeUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Header ── */
+        .header {
+          background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+          padding: 20px 28px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 1.1rem;
+          font-weight: 800;
+          color: white;
+          letter-spacing: -0.3px;
+        }
+
+        /* ── Stepper ── */
+        .steps {
+          display: flex;
+          align-items: center;
+          gap: 0;
+        }
+
+        .step {
+          width: 30px; height: 30px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.15);
+          color: rgba(255,255,255,0.7);
+          font-weight: 700;
+          font-size: 13px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s;
+          border: 1.5px solid rgba(255,255,255,0.15);
+        }
+
+        .step.active {
+          background: white;
+          color: var(--blue);
+          border-color: white;
+          box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+        }
+
+        .step.completed {
+          background: #4ade80;
+          color: white;
+          border-color: #4ade80;
+        }
+
+        .step-line {
+          width: 28px; height: 2px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 2px;
+          transition: background 0.3s;
+        }
+
+        .step-line.active { background: rgba(255,255,255,0.6); }
+
+        /* ── Progress bar ── */
+        .fp-progress {
+          height: 3px;
+          background: rgba(255,255,255,0.08);
+        }
+
+        .fp-progress-bar {
+          height: 100%;
+          background: linear-gradient(90deg, var(--navy-mid), var(--blue-light));
+          transition: width 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+
+        /* ── Form content ── */
+        .form-content {
+          padding: 32px;
+          color: var(--text);
+        }
+
+        .step-icon {
+          font-size: 3.2rem;
+          text-align: center;
+          margin-bottom: 0.9rem;
+          display: block;
+        }
+
+        .title {
+          font-size: 1.7rem;
+          font-weight: 800;
+          text-align: center;
+          margin-bottom: 0.5rem;
+          color: var(--text);
+          letter-spacing: -0.4px;
+        }
+
+        .subtitle {
+          color: var(--text-muted);
+          text-align: center;
+          font-size: 0.93rem;
+          line-height: 1.55;
+          margin-bottom: 1.8rem;
+        }
+
+        .subtitle strong { color: #93c5fd; }
+
+        /* ── Fields ── */
+        .field { margin-bottom: 1.3rem; }
+
+        .label {
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: #cbd5e1;
+          margin-bottom: 0.45rem;
+          display: block;
+          letter-spacing: 0.2px;
+        }
+
+        .input-group {
+          display: flex;
+          align-items: center;
+          background: rgba(255,255,255,0.06);
+          border: 1.5px solid rgba(59,130,246,0.25);
+          border-radius: var(--radius);
+          transition: all 0.2s;
+          overflow: hidden;
+        }
+
+        .input-group:focus-within {
+          border-color: var(--blue-light);
+          box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+          background: rgba(255,255,255,0.09);
+        }
+
+        .input-icon {
+          padding: 0 14px;
+          color: var(--text-muted);
+          font-size: 1rem;
+          flex-shrink: 0;
+        }
+
+        .input-group input {
+          flex: 1;
+          padding: 13px 12px 13px 0;
+          background: transparent;
+          border: none;
+          color: var(--text);
+          font-size: 0.94rem;
+          outline: none;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-weight: 500;
+        }
+
+        .input-group input::placeholder { color: #4b5563; }
+
+        /* ── OTP ── */
+        .otp-container {
+          display: flex;
+          gap: 12px;
+          justify-content: center;
+          margin: 2rem 0;
+        }
+
+        .otp-input {
+          width: 60px; height: 68px;
+          text-align: center;
+          font-size: 1.9rem;
+          font-weight: 800;
+          background: rgba(255,255,255,0.05);
+          border: 2px solid rgba(59,130,246,0.25);
+          border-radius: 12px;
+          color: white;
+          outline: none;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          transition: all 0.2s;
+          caret-color: var(--blue-light);
+        }
+
+        .otp-input:focus {
+          border-color: var(--blue-light);
+          box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+          background: rgba(255,255,255,0.09);
+        }
+
+        /* ── Strength ── */
+        .strength-bars {
+          display: flex;
+          gap: 6px;
+          margin: 1rem 0 0.5rem;
+          height: 5px;
+        }
+
+        .strength-bar {
+          flex: 1;
+          border-radius: 3px;
+          background: rgba(255,255,255,0.1);
+          transition: background 0.3s;
+        }
+
+        .strength-bar.active { background: #22c55e; }
+
+        /* ── Error ── */
+        .error-message {
+          background: rgba(239,68,68,0.12);
+          border: 1px solid rgba(239,68,68,0.3);
+          border-left: 3px solid #ef4444;
+          color: #fca5a5;
+          padding: 11px 14px;
+          border-radius: 10px;
+          margin: 0.8rem 0;
+          font-size: 0.88rem;
+          line-height: 1.5;
+        }
+
+        /* ── Button ── */
+        .btn-primary {
+          width: 100%;
+          padding: 13px;
+          background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+          color: white;
+          border: none;
+          border-radius: var(--radius);
+          font-size: 0.95rem;
+          font-weight: 700;
+          cursor: pointer;
+          margin-top: 0.8rem;
+          transition: all 0.22s;
+          box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 24px rgba(37,99,235,0.45);
+        }
+
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .fp-spinner {
+          width: 16px; height: 16px;
+          border-radius: 50%;
+          border: 2.5px solid rgba(255,255,255,0.3);
+          border-top-color: white;
+          animation: fpSpin 0.75s linear infinite;
+        }
+        @keyframes fpSpin { to { transform: rotate(360deg); } }
+
+        /* ── Success ── */
+        .success-screen {
+          text-align: center;
+          padding: 32px 16px 16px;
+        }
+
+        .success-icon {
+          font-size: 4.5rem;
+          margin-bottom: 1.2rem;
+          display: block;
+        }
+
+        .back-to-login {
+          display: inline-block;
+          margin-top: 1.5rem;
+          padding: 13px 32px;
+          background: linear-gradient(135deg, var(--navy), var(--blue));
+          color: white;
+          border-radius: var(--radius);
+          text-decoration: none;
+          font-weight: 700;
+          font-size: 0.95rem;
+          transition: all 0.22s;
+          box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+        }
+
+        .back-to-login:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 24px rgba(37,99,235,0.45);
+        }
+
+        .link {
+          color: #60a5fa;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .link:hover { text-decoration: underline; }
+
+        @media (max-width: 480px) {
+          .form-content { padding: 24px; }
+          .otp-input { width: 52px; height: 60px; font-size: 1.6rem; }
+        }
+      `}</style>
+
+      <div className="forgot-page">
+        <div className="forgot-card">
+
+          {/* ── Header ── */}
+          <div className="header">
+            <div className="logo">
+              <span></span>
+              <span>Tawsila</span>
+            </div>
+            <div className="steps">
+              {[1, 2, 3].map((s) => (
+                <div key={s} style={{ display: "flex", alignItems: "center" }}>
+                  <div className={`step ${step === s ? "active" : ""} ${step > s ? "completed" : ""}`}>
+                    {step > s ? "✓" : s}
+                  </div>
+                  {s < 3 && <div className={`step-line ${step > s ? "active" : ""}`} />}
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={styles.steps}>
-            {[1, 2, 3].map((s) => (
-              <div key={s} style={{ display: "flex", alignItems: "center" }}>
-                <div style={{ ...styles.stepDot, ...(step >= s ? styles.stepActive : {}) }}>
-                  {step > s ? "✓" : s}
-                </div>
-                {s < 3 && <div style={{ ...styles.stepLine, ...(step > s ? styles.stepLineActive : {}) }} />}
-              </div>
-            ))}
+
+          {/* ── Progress bar ── */}
+          <div className="fp-progress">
+            <div className="fp-progress-bar" style={{ width: `${((step - 1) / 2) * 100}%` }} />
           </div>
-        </div>
 
-        <div style={styles.form}>
-          {/* ── STEP 1 : Email ── */}
-          {step === 1 && (
-            <form onSubmit={handleSendOtp}>
-              <div style={styles.iconWrapper}>🔐</div>
-              <h2 style={styles.title}>Mot de passe oublié ?</h2>
-              <p style={styles.subtitle}>Entrez votre email — nous vous enverrons un code de réinitialisation</p>
+          <div className="form-content">
 
-              <div style={styles.field}>
-                <label style={styles.label}>Adresse email</label>
-                <div style={styles.inputWrapper}>
-                  <span style={styles.inputIcon}>📧</span>
-                  <input
-                    style={{ ...styles.input, opacity: searchParams.get('email') ? 0.7 : 1 }}
-                    type="email"
-                    placeholder="exemple@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    readOnly={!!searchParams.get('email')}
-                    required
-                  />
+            {/* STEP 1 — Email */}
+            {step === 1 && (
+              <form onSubmit={handleSendOtp}>
+                <span className="step-icon">🔐</span>
+                <h2 className="title">Mot de passe oublié ?</h2>
+                <p className="subtitle">Entrez l'adresse email associée à votre compte</p>
+
+                <div className="field">
+                  <label className="label">Adresse email</label>
+                  <div className="input-group">
+                    <span className="input-icon">📧</span>
+                    <input
+                      type="email"
+                      placeholder="votre@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      readOnly={!!searchParams.get("email")}
+                      style={{ opacity: searchParams.get("email") ? 0.75 : 1 }}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {error && <div style={styles.error}>⚠️ {error}</div>}
+                {error && <div className="error-message">{error}</div>}
 
-              <button type="submit" style={styles.btn} disabled={loading}>
-                {loading ? "Envoi en cours..." : "Envoyer le code →"}
-              </button>
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? <><div className="fp-spinner" /> Envoi en cours…</> : "Recevoir le code"}
+                </button>
 
-              <p style={styles.backLink}>
-                <Link to="/login" style={{ color: "#a78bfa", fontWeight: 600, textDecoration: "none" }}>
-                  ← Retour à la connexion
-                </Link>
-              </p>
-            </form>
-          )}
+                <p style={{ textAlign: "center", marginTop: "1.4rem", fontSize: "0.88rem" }}>
+                  <Link to="/login" style={{ color: "#93c5fd", fontWeight: 600, textDecoration: "none" }}>
+                    ← Retour à la connexion
+                  </Link>
+                </p>
+              </form>
+            )}
 
-          {/* ── STEP 2 : OTP ── */}
-          {step === 2 && (
-            <form onSubmit={handleVerifyOtp}>
-              <div style={styles.iconWrapper}>✉️</div>
-              <h2 style={styles.title}>Vérification email</h2>
-              <p style={styles.subtitle}>
-                Un code à 4 chiffres a été envoyé à <strong style={{ color: "#a78bfa" }}>{email}</strong>
-              </p>
+            {/* STEP 2 — OTP */}
+            {step === 2 && (
+              <form onSubmit={handleVerifyOtp}>
+                <span className="step-icon">📧</span>
+                <h2 className="title">Vérifiez votre email</h2>
+                <p className="subtitle">
+                  Nous avons envoyé un code à 4 chiffres à<br />
+                  <strong>{email}</strong>
+                </p>
 
-              <div style={styles.codeInputWrapper}>
-                {[0, 1, 2, 3].map((i) => (
-                  <input
-                    key={i}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    style={styles.codeBox}
-                    value={otp[i] || ""}
-                    onChange={(e) => handleOtpInput(e, i)}
-                  />
-                ))}
-              </div>
-
-              {error && <div style={styles.error}>⚠️ {error}</div>}
-
-              <button type="submit" style={styles.btn} disabled={loading || otp.replace(/\s/g, "").length < 4}>
-                {loading ? "Vérification..." : "Vérifier le code"}
-              </button>
-
-              <p style={{ textAlign: "center", fontSize: 13, color: "#9ca3af", marginTop: 12 }}>
-                Code non reçu ?{" "}
-                <span
-                  style={{ color: "#a78bfa", cursor: "pointer", fontWeight: 600 }}
-                  onClick={() => { setStep(1); setOtp(""); setError(null); }}
-                >
-                  Renvoyer
-                </span>
-              </p>
-            </form>
-          )}
-
-          {/* ── STEP 3 : Nouveau mot de passe ── */}
-          {step === 3 && !success && (
-            <form onSubmit={handleResetPassword}>
-              <div style={styles.iconWrapper}>🔑</div>
-              <h2 style={styles.title}>Nouveau mot de passe</h2>
-              <p style={styles.subtitle}>Choisissez un mot de passe fort pour sécuriser votre compte</p>
-
-              <div style={styles.field}>
-                <label style={styles.label}>Nouveau mot de passe</label>
-                <div style={styles.inputWrapper}>
-                  <span style={styles.inputIcon}>🔒</span>
-                  <input
-                    style={styles.input}
-                    type="password"
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                  />
+                <div className="otp-container">
+                  {[0, 1, 2, 3].map((i) => (
+                    <input
+                      key={i}
+                      type="text"
+                      maxLength={1}
+                      inputMode="numeric"
+                      className="otp-input"
+                      value={otp[i] || ""}
+                      onChange={(e) => handleOtpChange(e, i)}
+                      autoFocus={i === 0}
+                    />
+                  ))}
                 </div>
-              </div>
 
-              <div style={styles.field}>
-                <label style={styles.label}>Confirmer le mot de passe</label>
-                <div style={styles.inputWrapper}>
-                  <span style={styles.inputIcon}>🔒</span>
-                  <input
-                    style={styles.input}
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
+                {error && <div className="error-message">{error}</div>}
+
+                <button type="submit" className="btn-primary" disabled={loading || otp.replace(/\s/g, "").length < 4}>
+                  {loading ? <><div className="fp-spinner" /> Vérification…</> : "Confirmer le code"}
+                </button>
+
+                <p style={{ textAlign: "center", marginTop: "1.2rem", fontSize: "0.88rem", color: "var(--text-muted)" }}>
+                  Pas reçu ?{" "}
+                  <span className="link" onClick={() => setStep(1)}>Renvoyer le code</span>
+                </p>
+              </form>
+            )}
+
+            {/* STEP 3 — Nouveau mot de passe */}
+            {step === 3 && !success && (
+              <form onSubmit={handleResetPassword}>
+                <span className="step-icon">🔑</span>
+                <h2 className="title">Nouveau mot de passe</h2>
+                <p className="subtitle">Choisissez un mot de passe sécurisé</p>
+
+                <div className="field">
+                  <label className="label">Nouveau mot de passe</label>
+                  <div className="input-group">
+                    <span className="input-icon">🔒</span>
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Indicateur force mot de passe */}
-              {newPassword.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+                <div className="field">
+                  <label className="label">Confirmer le mot de passe</label>
+                  <div className="input-group">
+                    <span className="input-icon">🔒</span>
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {newPassword && (
+                  <div className="strength-bars">
                     {[
                       newPassword.length >= 6,
                       /[A-Z]/.test(newPassword),
                       /[0-9]/.test(newPassword),
                       /[^A-Za-z0-9]/.test(newPassword),
-                    ].map((ok, i) => (
-                      <div key={i} style={{ flex: 1, height: 4, borderRadius: 4, background: ok ? "#7c3aed" : "rgba(255,255,255,0.1)" }} />
+                    ].map((valid, i) => (
+                      <div key={i} className={`strength-bar ${valid ? "active" : ""}`} />
                     ))}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                    {[
-                      [newPassword.length >= 6, "6 caractères minimum"],
-                      [/[A-Z]/.test(newPassword), "Une majuscule"],
-                      [/[0-9]/.test(newPassword), "Un chiffre"],
-                    ].map(([ok, label]) => (
-                      <span key={label} style={{ fontSize: 12, color: ok ? "#86efac" : "#9ca3af" }}>
-                        {ok ? "✓" : "○"} {label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+                )}
 
-              {error && <div style={styles.error}>⚠️ {error}</div>}
+                {error && <div className="error-message">{error}</div>}
 
-              <button type="submit" style={styles.btn} disabled={loading}>
-                {loading ? "Modification en cours..." : "Réinitialiser le mot de passe 🔑"}
-              </button>
-            </form>
-          )}
+                <button type="submit" className="btn-primary" disabled={loading}>
+                  {loading ? <><div className="fp-spinner" /> Modification…</> : "Réinitialiser le mot de passe"}
+                </button>
+              </form>
+            )}
 
-          {/* ── Succès ── */}
-          {success && (
-            <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <div style={{ fontSize: 64, marginBottom: 16 }}>🎉</div>
-              <h2 style={{ ...styles.title, color: "#86efac" }}>Mot de passe modifié !</h2>
-              <p style={styles.subtitle}>Votre mot de passe a été réinitialisé avec succès.</p>
-              <Link to="/login" style={{ ...styles.btn, display: "inline-block", marginTop: 16, textDecoration: "none", textAlign: "center" }}>
-                Se connecter maintenant →
-              </Link>
-            </div>
-          )}
+            {/* SUCCESS */}
+            {success && (
+              <div className="success-screen">
+                <span className="success-icon">🎉</span>
+                <h2 className="title" style={{ color: "#4ade80" }}>Succès !</h2>
+                <p className="subtitle">Votre mot de passe a été réinitialisé avec succès.</p>
+                <Link to="/login" className="back-to-login">Se connecter maintenant</Link>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
-};
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "linear-gradient(135deg, #0f0a1e 0%, #1a0f3a 50%, #0d1b2a 100%)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    padding: "20px", fontFamily: "'Segoe UI', sans-serif",
-  },
-  card: {
-    background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)",
-    border: "1px solid rgba(167,139,250,0.2)", borderRadius: 24,
-    width: "100%", maxWidth: 460, overflow: "hidden",
-    boxShadow: "0 25px 60px rgba(0,0,0,0.5)",
-  },
-  header: {
-    background: "linear-gradient(135deg, #7c3aed, #4f46e5)", padding: "20px 28px",
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-  },
-  logo: { display: "flex", alignItems: "center", gap: 10, fontSize: 22 },
-  logoText: { color: "#fff", fontWeight: 700, fontSize: 18 },
-  steps: { display: "flex", alignItems: "center" },
-  stepDot: {
-    width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.2)",
-    color: "#fff", fontSize: 12, fontWeight: 700,
-    display: "flex", alignItems: "center", justifyContent: "center",
-  },
-  stepActive: { background: "#fff", color: "#7c3aed" },
-  stepLine: { width: 24, height: 2, background: "rgba(255,255,255,0.2)" },
-  stepLineActive: { background: "#fff" },
-  form: { padding: "32px" },
-  iconWrapper: { textAlign: "center", fontSize: 52, marginBottom: 12 },
-  title: { color: "#f3f4f6", fontSize: 22, fontWeight: 700, margin: "0 0 6px", textAlign: "center" },
-  subtitle: { color: "#9ca3af", fontSize: 14, margin: "0 0 24px", textAlign: "center", lineHeight: 1.5 },
-  field: { marginBottom: 16 },
-  label: { display: "block", color: "#c4b5fd", fontSize: 13, fontWeight: 600, marginBottom: 8 },
-  inputWrapper: {
-    display: "flex", alignItems: "center",
-    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.25)",
-    borderRadius: 12, overflow: "hidden",
-  },
-  inputIcon: { padding: "0 12px", fontSize: 16 },
-  input: {
-    flex: 1, padding: "12px 0", background: "transparent",
-    border: "none", color: "#f3f4f6", fontSize: 14, outline: "none",
-  },
-  btn: {
-    width: "100%", padding: "13px", borderRadius: 12,
-    background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-    color: "#fff", border: "none", fontWeight: 700, fontSize: 15,
-    cursor: "pointer", marginTop: 8, boxShadow: "0 4px 20px rgba(124,58,237,0.4)",
-  },
-  error: {
-    background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-    color: "#fca5a5", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 12,
-  },
-  backLink: { textAlign: "center", marginTop: 16, fontSize: 14 },
-  codeInputWrapper: { display: "flex", gap: 12, justifyContent: "center", margin: "24px 0" },
-  codeBox: {
-    width: 56, height: 64, textAlign: "center", fontSize: 28, fontWeight: 700,
-    background: "rgba(255,255,255,0.05)", border: "2px solid rgba(167,139,250,0.3)",
-    borderRadius: 12, color: "#f3f4f6", outline: "none",
-  },
 };
 
 export default ForgotPassword;
