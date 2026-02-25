@@ -2,6 +2,7 @@ import { useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import { baseUrl } from "../utils/services";
+import tawsilaLogo from "../assets/tawsilalogo.png";
 import "./Register.css";
 
 const Register = () => {
@@ -111,14 +112,11 @@ const Register = () => {
 
   return (
     <div className="rg-page">
-
-      {/* Fond voiture animé */}
       <div className="rg-bg" />
       <div className="rg-overlay" />
 
       <div className="rg-card">
-
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="rg-header">
           <div className="rg-brand">
             <img src={tawsilaLogo} alt="Tawsila" className="rg-brand-logo" />
@@ -127,7 +125,6 @@ const Register = () => {
               <span className="rg-brand-tag">Your Ride, Our Pride</span>
             </div>
           </div>
-
           <div className="rg-stepper">
             {steps.map(([label, s]) => (
               <div key={s} className="rg-step-item">
@@ -147,12 +144,12 @@ const Register = () => {
           </div>
         </div>
 
-        {/* Progress bar */}
+        {/* Progress */}
         <div className="rg-progress">
           <div className="rg-progress-bar" style={{ width: `${((step - 1) / 2) * 100}%` }} />
         </div>
 
-        {/* ── STEP 1 : Formulaire ── */}
+        {/* STEP 1 */}
         {step === 1 && (
           <form onSubmit={handleFormSubmit} className="rg-body">
             <h2 className="rg-title">Créer un compte</h2>
@@ -224,45 +221,31 @@ const Register = () => {
               {otpLoading ? <><div className="rg-spinner" /> Envoi du code…</> : "Envoyer le code de vérification →"}
             </button>
 
-            <p className="rg-login-link">
-              Déjà un compte ? <Link to="/login">Se connecter</Link>
-            </p>
+            <p className="rg-login-link">Déjà un compte ? <Link to="/login">Se connecter</Link></p>
           </form>
         )}
 
-        {/* ── STEP 2 : OTP ── */}
+        {/* STEP 2 */}
         {step === 2 && (
           <form onSubmit={handleVerification} className="rg-body" style={{ textAlign: "center" }}>
             <div className="rg-otp-icon">📧</div>
             <h2 className="rg-title" style={{ textAlign: "center" }}>Vérification email</h2>
             <p className="rg-subtitle" style={{ textAlign: "center" }}>
-              Code envoyé à <strong style={{ color: '#1a56db' }}>{formData.email}</strong>
+              Code envoyé à <strong style={{ color: "#1a56db" }}>{formData.email}</strong>
             </p>
-
             <div className="rg-otp-wrap">
               {[0, 1, 2, 3].map((i) => (
-                <input
-                  key={i}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  className="rg-otp-box"
-                  value={verificationCode[i] || ""}
-                  onChange={(e) => handleOtpInput(e, i)}
-                />
+                <input key={i} type="text" inputMode="numeric" maxLength={1} className="rg-otp-box"
+                  value={verificationCode[i] || ""} onChange={(e) => handleOtpInput(e, i)} />
               ))}
             </div>
-
             {otpError  && <div className="rg-error">{otpError}</div>}
             {resendMsg && <div className="rg-success">{resendMsg}</div>}
-
             <button type="submit" className="rg-btn" disabled={otpLoading || verificationCode.replace(/\s/g, "").length < 4}>
               {otpLoading ? <><div className="rg-spinner" /> Vérification…</> : "Vérifier le code"}
             </button>
-
             <p style={{ fontSize: "0.83rem", color: "#94a3b8", marginTop: "0.9rem" }}>
-              Code non reçu ?{" "}
-              <button type="button" className="rg-link-btn" onClick={handleResend}>Renvoyer</button>
+              Code non reçu ? <button type="button" className="rg-link-btn" onClick={handleResend}>Renvoyer</button>
             </p>
             <p style={{ fontSize: "0.83rem", color: "#94a3b8", marginTop: "6px" }}>
               <button type="button" className="rg-link-btn" onClick={() => setStep(1)}>← Modifier l'email</button>
@@ -270,12 +253,11 @@ const Register = () => {
           </form>
         )}
 
-        {/* ── STEP 3 : Règles ── */}
+        {/* STEP 3 */}
         {step === 3 && (
           <form onSubmit={handleFinalRegister} className="rg-body">
             <h2 className="rg-title">Conditions d'utilisation</h2>
             <p className="rg-subtitle">Lisez et acceptez nos règles pour rejoindre Tawsila</p>
-
             <div className="rg-rules-box">
               {[
                 ["🤝", "Respect mutuel", "Traitez chaque membre avec respect et bienveillance."],
@@ -294,7 +276,6 @@ const Register = () => {
                 </div>
               ))}
             </div>
-
             <div className="rg-agree-row" onClick={() => setAgreed(!agreed)}>
               <div className={`rg-checkbox ${agreed ? "checked" : ""}`}>
                 {agreed && (
@@ -303,19 +284,14 @@ const Register = () => {
                   </svg>
                 )}
               </div>
-              <span className="rg-agree-text">
-                J'accepte les <span>conditions d'utilisation</span> de Tawsila
-              </span>
+              <span className="rg-agree-text">J'accepte les <span>conditions d'utilisation</span> de Tawsila</span>
             </div>
-
             {registerError && <div className="rg-error">{registerError}</div>}
-
             <button type="submit" className="rg-btn" disabled={!agreed || isRegisterLoading}>
               {isRegisterLoading ? <><div className="rg-spinner" /> Création en cours…</> : "Créer mon compte 🚗"}
             </button>
           </form>
         )}
-
       </div>
     </div>
   );
