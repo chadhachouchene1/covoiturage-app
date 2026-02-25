@@ -12,16 +12,18 @@ function App() {
   const { user } = useContext(AuthContext);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f0a1e" }}>
+    <div style={{ height: "100vh", overflow: "hidden", background: "#0f0a1e" }}>
       <NavBar />
-      <Routes>
-        <Route path="/"                element={user ? <Home />  : <Navigate to="/login" />} />
-        <Route path="/register"        element={user ? <Navigate to="/" /> : <Register />} />
-        <Route path="/login"           element={user ? <Navigate to="/" /> : <Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/chat"            element={user ? <Chat />  : <Navigate to="/login" />} />
-        <Route path="/*"               element={<Navigate to="/" />} />
-      </Routes>
+      <div style={{ height: "calc(100vh - 64px)", overflow: "auto" }}>
+        <Routes>
+          <Route path="/"                element={user ? <Home />  : <Navigate to="/login" />} />
+          <Route path="/register"        element={user ? <Navigate to="/" /> : <Register />} />
+          <Route path="/login"           element={user ? <Navigate to="/" /> : <Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/chat"            element={user ? <Chat />  : <Navigate to="/login" />} />
+          <Route path="/*"               element={<Navigate to="/" />} />
+        </Routes>
+      </div>
     </div>
   );
 }
