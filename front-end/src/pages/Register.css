@@ -1,0 +1,521 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:wght@600;700;800&display=swap');
+
+:root {
+  --blue:  #1a56db;
+  --ink:   #0c1220;
+  --r:     12px;
+  --ease:  cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ════════════════════════════
+   PAGE — même fond animé que Login s
+════════════════════════════ */
+.rg-page {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+  font-family: 'DM Sans', sans-serif;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Fond voiture animé */
+.rg-bg {
+  position: fixed;
+  inset: 0;
+  top: 0;
+  background-image: url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1600&q=80');
+  background-size: cover;
+  background-position: center;
+  filter: blur(6px) brightness(0.45);
+  transform: scale(1.08);
+  animation: driveBg 18s ease-in-out infinite alternate;
+  will-change: transform;
+  z-index: 0;
+}
+
+@keyframes driveBg {
+  0%   { transform: scale(1.08) translateX(0px); }
+  50%  { transform: scale(1.1)  translateX(-18px); }
+  100% { transform: scale(1.08) translateX(6px); }
+}
+
+/* Overlay */
+.rg-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(12, 18, 32, 0.55) 0%,
+    rgba(12, 18, 32, 0.25) 50%,
+    rgba(26, 86, 219, 0.15) 100%
+  );
+  z-index: 0;
+}
+
+/* ════════════════════════════
+   CARD
+════════════════════════════ */
+.rg-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 520px;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 32px 80px rgba(12, 18, 32, 0.35),
+    0 8px 24px rgba(12, 18, 32, 0.2),
+    0 0 0 1px rgba(255,255,255,0.5);
+  animation: cardIn 0.5s var(--ease) both;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Header ── */
+.rg-header {
+  background: white;
+  padding: 14px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1.5px solid #e8ecf4;
+}
+
+.rg-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rg-brand-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.rg-brand-name {
+  font-family: 'Fraunces', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.3px;
+  line-height: 1;
+}
+
+.rg-brand-tag {
+  font-size: 9.5px;
+  color: var(--blue);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  display: block;
+  margin-top: 2px;
+}
+
+/* ── Stepper ── */
+.rg-stepper {
+  display: flex;
+  align-items: center;
+}
+
+.rg-step-item {
+  display: flex;
+  align-items: center;
+}
+
+.rg-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #94a3b8;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #e2e8f0;
+  transition: all 0.3s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.rg-step-dot.active {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(12,18,32,0.1);
+}
+
+.rg-step-dot.done {
+  background: #22c55e;
+  color: white;
+  border-color: #22c55e;
+}
+
+.rg-step-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  transition: color 0.3s;
+  margin-top: 3px;
+  display: block;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.rg-step-label.active { color: var(--ink); }
+.rg-step-label.done   { color: #22c55e; }
+
+.rg-step-line {
+  width: 22px;
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  transition: background 0.3s;
+  margin: 0 4px 16px;
+}
+
+.rg-step-line.done { background: #22c55e; }
+
+/* ── Progress bar ── */
+.rg-progress {
+  height: 3px;
+  background: #f1f5f9;
+}
+
+.rg-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ink), var(--blue));
+  transition: width 0.4s var(--ease);
+}
+
+/* ── Form body ── */
+.rg-body {
+  padding: 22px 28px;
+}
+
+.rg-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.4px;
+  margin-bottom: 0.2rem;
+}
+
+.rg-subtitle {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  margin-bottom: 1.2rem;
+}
+
+/* ── Avatar ── */
+.rg-avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.2rem;
+}
+
+.rg-avatar-label {
+  cursor: pointer;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px dashed rgba(26,86,219,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  background: #f4f6fb;
+}
+
+.rg-avatar-label:hover { border-color: var(--blue); }
+
+.rg-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rg-avatar-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: #94a3b8;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+/* ── Row / Field ── */
+.rg-row {
+  display: flex;
+  gap: 12px;
+}
+
+.rg-field {
+  flex: 1;
+  margin-bottom: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rg-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0.2px;
+}
+
+.rg-input {
+  background: #f4f6fb;
+  border: 1.5px solid rgba(12,18,32,0.1);
+  border-radius: var(--r);
+  padding: 9px 12px;
+  color: var(--ink);
+  font-size: 0.875rem;
+  outline: none;
+  width: 100%;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  transition: all 0.18s var(--ease);
+}
+
+.rg-input:focus {
+  border-color: var(--blue);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+}
+
+.rg-input::placeholder { color: #c8d0dd; }
+
+.rg-input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+/* ── OTP ── */
+.rg-otp-icon {
+  text-align: center;
+  font-size: 2.8rem;
+  margin-bottom: 0.6rem;
+}
+
+.rg-otp-wrap {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.rg-otp-box {
+  width: 56px;
+  height: 62px;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: #f4f6fb;
+  border: 1.5px solid rgba(12,18,32,0.1);
+  border-radius: var(--r);
+  color: var(--ink);
+  outline: none;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.18s var(--ease);
+  caret-color: var(--blue);
+}
+
+.rg-otp-box:focus {
+  border-color: var(--blue);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+}
+
+/* ── Rules ── */
+.rg-rules-box {
+  background: #f8fafc;
+  border: 1.5px solid #e8ecf4;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 1rem;
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(26,86,219,0.2) transparent;
+}
+
+.rg-rule {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.rg-rule-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+.rg-rule-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 1px;
+}
+
+.rg-rule-text {
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+/* ── Checkbox ── */
+.rg-agree-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  user-select: none;
+}
+
+.rg-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(12,18,32,0.15);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f4f6fb;
+}
+
+.rg-checkbox.checked {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.rg-agree-text {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.rg-agree-text span {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+/* ── Error / Success ── */
+.rg-error {
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-left: 3px solid #f87171;
+  color: #dc2626;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 0.83rem;
+  margin-bottom: 0.8rem;
+  line-height: 1.5;
+}
+
+.rg-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-left: 3px solid #22c55e;
+  color: #16a34a;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 0.83rem;
+  margin-bottom: 0.8rem;
+}
+
+/* ── Button ── */
+.rg-btn {
+  width: 100%;
+  padding: 11px;
+  border-radius: var(--r);
+  background: var(--ink);
+  color: white;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 0.4rem;
+  transition: all 0.2s var(--ease);
+  box-shadow: 0 4px 14px rgba(12,18,32,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rg-btn:hover:not(:disabled) {
+  background: #1e2d4a;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(12,18,32,0.25);
+}
+
+.rg-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.rg-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Links ── */
+.rg-login-link {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.84rem;
+  margin-top: 1rem;
+}
+
+.rg-login-link a {
+  color: var(--blue);
+  font-weight: 700;
+  text-decoration: none;
+}
+.rg-login-link a:hover { text-decoration: underline; }
+
+.rg-link-btn {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  padding: 0;
+}
+.rg-link-btn:hover { text-decoration: underline; }
+
+/* ── Responsive ── */
+@media (max-width: 560px) {
+  .rg-card  { border-radius: 16px; }
+  .rg-body  { padding: 18px 20px; }
+  .rg-title { font-size: 1.25rem; }
+}
