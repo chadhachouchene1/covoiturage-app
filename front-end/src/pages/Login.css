@@ -10,67 +10,75 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ════════════════════════════
-   PAGE — fond voiture animée aaa
+   PAGE
 ════════════════════════════ */
 .login-page {
-  height: calc(100vh - 64px);
+  height: calc(100vh - 90px);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: 'DM Sans', sans-serif;
   position: relative;
   overflow: hidden;
+  background: #0d1a35;
 }
 
-/* Image de voiture en fond */
+/* ── SVG background pleine page ── */
 .login-bg {
   position: absolute;
   inset: 0;
-  background-image: url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1600&q=80');
-  background-size: cover;
-  background-position: center;
-  filter: blur(6px) brightness(0.45);
-  transform: scale(1.08);
-  animation: driveBg 18s ease-in-out infinite alternate;
-  will-change: transform;
+  z-index: 0;
+  display: flex;
+  align-items: stretch;
 }
 
-@keyframes driveBg {
-  0%   { transform: scale(1.08) translateX(0px); }
-  50%  { transform: scale(1.1)  translateX(-18px); }
-  100% { transform: scale(1.08) translateX(6px); }
+.bg-scene {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
-/* Overlay gradient sur l'image */
+/* Animation lévitation voiture — via filter sur le SVG complet */
+.login-bg {
+  animation: sceneDrift 8s ease-in-out infinite;
+}
+@keyframes sceneDrift {
+  0%,100% { transform: translateY(0px); }
+  50%     { transform: translateY(-8px); }
+}
+
+/* Overlay sombre léger pour lisibilité de la card */
 .login-overlay {
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(
     135deg,
-    rgba(12, 18, 32, 0.55) 0%,
-    rgba(12, 18, 32, 0.25) 50%,
-    rgba(26, 86, 219, 0.15) 100%
+    rgba(9, 18, 40, 0.30) 0%,
+    rgba(9, 18, 40, 0.10) 50%,
+    rgba(9, 18, 40, 0.25) 100%
   );
+  pointer-events: none;
 }
 
 /* ════════════════════════════
-   CARD — formulaire au premier plan
+   CARD
 ════════════════════════════ */
 .login-card {
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 420px;
+  max-width: 520px;
   margin: 0 1.5rem;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-radius: 20px;
-  padding: 2.2rem 2.4rem;
+  padding: 2rem 2.4rem 2.2rem;
   box-shadow:
-    0 32px 80px rgba(12, 18, 32, 0.35),
-    0 8px 24px rgba(12, 18, 32, 0.2),
-    0 0 0 1px rgba(255,255,255,0.5);
+    0 32px 80px rgba(9, 18, 40, 0.50),
+    0 8px 24px rgba(9, 18, 40, 0.28),
+    0 0 0 1px rgba(255,255,255,0.6);
   animation: cardIn 0.6s var(--ease) both;
 }
 
@@ -79,10 +87,10 @@
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Tagline en haut de la card */
+/* Tagline */
 .login-tagline {
   text-align: center;
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.1rem;
 }
 
 .login-tagline-badge {
@@ -100,22 +108,20 @@
 }
 
 .badge-dot {
-  width: 6px;
-  height: 6px;
+  width: 6px; height: 6px;
   background: #22c55e;
   border-radius: 50%;
   box-shadow: 0 0 8px rgba(34,197,94,0.7);
   animation: pulse 2.5s ease-in-out infinite;
 }
-
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.5; transform: scale(0.75); }
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%     { opacity: 0.5; transform: scale(0.75); }
 }
 
 .form-logo {
   width: 110px;
-  margin: 0 auto 1rem;
+  margin: 0 auto 0.9rem;
   display: block;
 }
 
@@ -133,17 +139,17 @@
   color: #94a3b8;
   font-size: 0.85rem;
   text-align: center;
-  margin-bottom: 1.6rem;
+  margin-bottom: 1.4rem;
 }
 
 /* Fields */
-.field { margin-bottom: 0.9rem; }
+.field { margin-bottom: 0.85rem; }
 
 .field-label-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.38rem;
 }
 
 .label {
@@ -169,13 +175,11 @@
   background: #f4f6fb;
   transition: all 0.18s var(--ease);
 }
-
 .input-wrapper:focus-within {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
   background: #fff;
 }
-
 .input-wrapper.error {
   border-color: #f87171;
   box-shadow: 0 0 0 3px rgba(248,113,113,0.1);
@@ -199,7 +203,6 @@
   outline: none;
   font-family: 'DM Sans', sans-serif;
 }
-
 .input::placeholder { color: #c8d0dd; }
 
 .eye-btn {
@@ -214,29 +217,21 @@
 }
 .eye-btn:hover { color: var(--ink); }
 
-/* Remember */
 .remember-row {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin: 0.8rem 0 1.1rem;
+  margin: 0.75rem 0 1rem;
   user-select: none;
   cursor: pointer;
 }
-
 .remember-row input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
+  width: 1rem; height: 1rem;
   accent-color: var(--blue);
   cursor: pointer;
 }
+.remember-text { font-size: 0.83rem; color: #64748b; }
 
-.remember-text {
-  font-size: 0.83rem;
-  color: #64748b;
-}
-
-/* Error */
 .error-box {
   display: flex;
   gap: 0.7rem;
@@ -250,7 +245,6 @@
   margin-bottom: 0.85rem;
 }
 
-/* Button */
 .btn-primary {
   width: 100%;
   padding: 0.85rem;
@@ -268,35 +262,29 @@
   gap: 0.5rem;
   font-family: 'DM Sans', sans-serif;
 }
-
 .btn-primary:hover:not(:disabled) {
   background: #1e2d4a;
   transform: translateY(-1px);
   box-shadow: 0 8px 24px rgba(12,18,32,0.25);
 }
-
 .btn-primary:active:not(:disabled) { transform: translateY(0); }
 .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .spinner {
-  width: 15px;
-  height: 15px;
+  width: 15px; height: 15px;
   border: 2.5px solid rgba(255,255,255,0.3);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.85s linear infinite;
 }
-
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Signup */
 .signup-link {
   text-align: center;
-  margin-top: 1.2rem;
+  margin-top: 1.1rem;
   color: #94a3b8;
   font-size: 0.84rem;
 }
-
 .signup-link a {
   color: var(--blue);
   font-weight: 600;
@@ -306,7 +294,7 @@
 
 /* ── Responsive ── */
 @media (max-width: 500px) {
-  .login-card  { padding: 1.8rem 1.5rem; margin: 0 1rem; }
-  .form-title  { font-size: 1.4rem; }
-  .form-logo   { width: 90px; }
+  .login-card { padding: 1.8rem 1.5rem; margin: 0 1rem; }
+  .form-title { font-size: 1.4rem; }
+  .form-logo  { width: 90px; }
 }
