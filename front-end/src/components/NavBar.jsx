@@ -391,7 +391,13 @@ const NavBar = () => {
           height: 1px;
           background: rgba(13,31,78,0.07);
           margin: 6px 4px;
+          
         }
+          @media (max-width: 560px) {
+  .rg-card  { border-radius: 16px; }
+  .rg-body  { padding: 18px 20px; }
+  .rg-title { font-size: 1.25rem; }
+}
       `}</style>
 
       <nav className="taw-nav">
@@ -437,7 +443,7 @@ const NavBar = () => {
           <div className="taw-actions">
             {!user ? (
               <>
-                <Link to="/chat" className="taw-btn-ghost">Chat</Link>
+                
                 <Link to="/register" className="taw-btn-ghost">S'inscrire</Link>
                 <Link to="/login" className="taw-btn-primary">Connexion</Link>
               </>
