@@ -1,40 +1,47 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import Register        from "./pages/Register.jsx";
-import Chat            from "./pages/Chat.jsx";
-import Login           from "./pages/Login.jsx";
-import Home            from "./pages/Home.jsx";
-import ForgotPassword  from "./pages/ForgotPassword.jsx";
-import Landing         from "./pages/Landing.jsx";
-import NavBar          from "./components/NavBar.jsx";
-import { useContext }  from "react";
+import Register from "./pages/Register.jsx";
+import Chat from "./pages/Chat.jsx";
+import Login from "./pages/Login.jsx";
+import Home from "./pages/Home.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import PublishTrip from "./pages/PublishTrip.jsx";
+import MyReservations from "./pages/MyReservations.jsx";
+import PaymentSuccess from "./pages/PaymentSuccess.jsx"; // ⭐ AJOUT
+import NavBar from "./components/NavBar.jsx";
+import { useContext } from "react";
 import { AuthContext } from "./context/AuthContext.jsx";
 
 function App() {
   const { user } = useContext(AuthContext);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8faff" }}>
-
-      {/* NavBar affichée sur toutes les pages */}
+    <div style={{ height: "100vh", overflow: "hidden", background: "#0f0a1e" }}>
       <NavBar />
 
-      <Routes>
+      <div style={{ height: "calc(100vh - 64px)", overflowY: "auto", overflowX: "hidden" }}>
+        <Routes>
 
-        {/* Racine : Landing si visiteur, Home si connecté */}
-        <Route path="/"                element={user ? <Home />            : <Landing />} />
+          <Route path="/" element={<Home />} />
 
-        {/* Routes publiques */}
-        <Route path="/register"        element={user ? <Navigate to="/" /> : <Register />} />
-        <Route path="/login"           element={user ? <Navigate to="/" /> : <Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
 
-        {/* Routes privées */}
-        <Route path="/chat"            element={user ? <Chat />  : <Navigate to="/login" />} />
+          <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
 
-        {/* Fallback */}
-        <Route path="/*"               element={<Navigate to="/" />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
-      </Routes>
+          <Route path="/publish-trip" element={user ? <PublishTrip /> : <Navigate to="/login" />} />
+
+          <Route path="/my-reservations" element={user ? <MyReservations /> : <Navigate to="/login" />} />
+
+          <Route path="/chat" element={user ? <Chat /> : <Navigate to="/login" />} />
+
+          {/* ⭐ STRIPE SUCCESS ROUTE */}
+          <Route path="/payment-success/:id" element={<PaymentSuccess />} />
+
+          <Route path="/*" element={<Navigate to="/" />} />
+
+        </Routes>
+      </div>
     </div>
   );
 }

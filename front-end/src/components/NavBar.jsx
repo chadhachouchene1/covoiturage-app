@@ -2,6 +2,7 @@ import { useContext, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import tawsilaLogo from '../assets/tawsilalogo.png';
+ import { TripContext } from "../context/TripContext";
 
 // Tawsila SVG Logo (inlined from the uploaded logo)
 const TawsilaLogo = ({ size = 38 }) => (
@@ -36,6 +37,13 @@ const NavBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
+  const { unreadCount, fetchUnreadCount } = useContext(TripContext);
+   
+   useEffect(() => {
+     fetchUnreadCount();
+     const interval = setInterval(fetchUnreadCount, 30000); // check toutes les 30s
+     return () => clearInterval(interval);
+   }, [user]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -423,14 +431,31 @@ const NavBar = () => {
                 </svg>
                 Accueil
               </Link>
-              <Link to="/trips" className={`taw-link${isActive('/trips') ? ' active' : ''}`}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-                  <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
-                </svg>
-                Trajets
-              </Link>
               
+              <Link to="/chat" className={`taw-link${isActive('/chat') ? ' active' : ''}`}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                </svg>
+                Chat
+              </Link>
+              <Link to="/my-reservations" className={`taw-link${isActive('/my-reservations') ? ' active' : ''}`}>
+     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+       <polyline points="14 2 14 8 20 8"/>
+       <line x1="16" y1="13" x2="8" y2="13"/>
+       <line x1="16" y1="17" x2="8" y2="17"/>
+     </svg>
+     Trajets
+     {unreadCount > 0 && (
+       <span style={{
+         background: "#EF4444", color: "#fff",
+         borderRadius: "50%", width: "18px", height: "18px",
+         fontSize: "10px", fontWeight: 700,
+         display: "flex", alignItems: "center", justifyContent: "center",
+         marginLeft: "4px"
+       }}>{unreadCount}</span>
+     )}
+   </Link>
             </div>
           )}
 
@@ -438,7 +463,7 @@ const NavBar = () => {
           <div className="taw-actions">
             {!user ? (
               <>
-                <Link to="/chat" className="taw-btn-ghost">Chat</Link>
+                
                 <Link to="/register" className="taw-btn-ghost">S'inscrire</Link>
                 <Link to="/login" className="taw-btn-primary">Connexion</Link>
               </>
@@ -469,17 +494,12 @@ const NavBar = () => {
                       </svg>
                       Mon profil
                     </Link>
-                    <Link to="/my-trips" className="taw-dd-item">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h3l3 3v5h-6V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
-                      </svg>
-                      Mes trajets
-                    </Link>
+                   
                     <Link to="/reservations" className="taw-dd-item">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M15 3H9a2 2 0 00-2 2v14a2 2 0 002 2h6a2 2 0 002-2V5a2 2 0 00-2-2z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                       </svg>
-                      Mes réservations
+                      Mes trajets
                     </Link>
                     <Link to="/settings" className="taw-dd-item">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

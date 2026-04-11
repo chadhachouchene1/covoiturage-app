@@ -6,6 +6,8 @@ require("dotenv").config();
 
 const app = express();
 const userRoute = require("./Routes/userRoute");
+const tripRoute = require("./Routes/Triproute");
+const reservationRoute = require("./Routes/Reservationroute")
 
 app.use(express.json());
 app.use(cors());
@@ -14,6 +16,8 @@ app.use(cors());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use("/api/users", userRoute);
+app.use("/api/trips", tripRoute);
+app.use("/api/reservations", reservationRoute);
 
 const port = process.env.PORT || 5000;
 

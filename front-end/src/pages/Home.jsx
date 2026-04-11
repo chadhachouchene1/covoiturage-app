@@ -1,311 +1,278 @@
-import { useContext } from 'react';
-import { Link } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { useContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { TripContext } from "../context/TripContext";
+import { AuthContext } from "../context/AuthContext";
+import "./Home.css";
 
-const Home = () => {
+const baseImgUrl = "http://localhost:5000";
+
+const TripCard = ({ trip, onReserve }) => {
   const { user } = useContext(AuthContext);
-
-  const avatarSrc = user?.image
-    ? `http://localhost:5000${user.image}`
+  const isDriver = user?.id === trip.driver?._id;
+  const driverAvatar = trip.driver?.image
+    ? `${baseImgUrl}${trip.driver.image}`
     : null;
-
-  const initials = user
-    ? `${user.name?.split(' ')[0]?.[0] || ''}${user.name?.split(' ')[1]?.[0] || ''}`.toUpperCase()
-    : '';
-
-  const stats = [
-    { icon: '🚗', value: '2 400+', label: 'Trajets par mois' },
-    { icon: '👥', value: '1 800+', label: 'Membres actifs' },
-    { icon: '💰', value: '60%', label: "d'économies" },
-    { icon: '🌱', value: '12T', label: 'CO₂ économisé' },
-  ];
-
-  const quickActions = [
-    { icon: '➕', label: 'Proposer un trajet', to: '/trips/new', color: '#7c3aed' },
-    { icon: '🔍', label: 'Chercher un trajet', to: '/trips', color: '#4f46e5' },
-    { icon: '🎫', label: 'Mes réservations', to: '/reservations', color: '#6d28d9' },
-    { icon: '💬', label: 'Messages', to: '/chat', color: '#5b21b6' },
-  ];
+  const carImg = trip.carImage ? `${baseImgUrl}${trip.carImage}` : null;
+  const formattedDate = new Date(trip.date).toLocaleDateString("fr-FR", {
+    weekday: "short", day: "numeric", month: "short",
+  });
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
-
-        .home-root {
-          min-height: 100vh;
-          background: linear-gradient(135deg, #0f0a1e 0%, #1a0f3a 50%, #0d1b2a 100%);
-          font-family: 'DM Sans', sans-serif;
-          color: #f3f4f6;
-        }
-
-        .home-content {
-          max-width: 1100px;
-          margin: 0 auto;
-          padding: 40px 24px 80px;
-        }
-
-        /* ── Welcome banner ── */
-        .welcome-banner {
-          background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(79,70,229,0.15));
-          border: 1px solid rgba(167,139,250,0.2);
-          border-radius: 24px;
-          padding: 36px 40px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 40px;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .welcome-banner::before {
-          content: '';
-          position: absolute;
-          top: -60px; right: -60px;
-          width: 200px; height: 200px;
-          background: radial-gradient(circle, rgba(124,58,237,0.3), transparent 70%);
-          pointer-events: none;
-        }
-
-        .welcome-left { display: flex; align-items: center; gap: 20px; }
-
-        .welcome-avatar {
-          width: 72px; height: 72px;
-          border-radius: 50%;
-          object-fit: cover;
-          border: 3px solid rgba(167,139,250,0.5);
-          box-shadow: 0 0 20px rgba(124,58,237,0.3);
-        }
-
-        .welcome-avatar-placeholder {
-          width: 72px; height: 72px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #7c3aed, #4f46e5);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 26px; font-weight: 800; color: white;
-          border: 3px solid rgba(167,139,250,0.5);
-          box-shadow: 0 0 20px rgba(124,58,237,0.3);
-          flex-shrink: 0;
-        }
-
-        .welcome-text h1 {
-          font-family: 'Syne', sans-serif;
-          font-size: 1.8rem;
-          font-weight: 800;
-          margin: 0 0 6px;
-          background: linear-gradient(135deg, #f3f4f6, #c4b5fd);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .welcome-text p {
-          color: #9ca3af;
-          margin: 0;
-          font-size: 15px;
-        }
-
-        .welcome-badge {
-          background: rgba(34,197,94,0.15);
-          border: 1px solid rgba(34,197,94,0.3);
-          border-radius: 50px;
-          padding: 6px 16px;
-          color: #86efac;
-          font-size: 13px;
-          font-weight: 600;
-          display: flex; align-items: center; gap: 6px;
-          flex-shrink: 0;
-        }
-
-        /* ── Stats row ── */
-        .stats-row {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-          margin-bottom: 40px;
-        }
-
-        .stat-card {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(167,139,250,0.15);
-          border-radius: 16px;
-          padding: 20px;
-          text-align: center;
-          transition: border-color 0.2s, transform 0.2s;
-        }
-
-        .stat-card:hover {
-          border-color: rgba(167,139,250,0.35);
-          transform: translateY(-2px);
-        }
-
-        .stat-icon { font-size: 24px; margin-bottom: 8px; }
-        .stat-value {
-          font-family: 'Syne', sans-serif;
-          font-size: 1.6rem;
-          font-weight: 800;
-          color: #c4b5fd;
-        }
-        .stat-label { color: #6b7280; font-size: 12px; margin-top: 2px; }
-
-        /* ── Section title ── */
-        .section-title {
-          font-family: 'Syne', sans-serif;
-          font-size: 1.1rem;
-          font-weight: 700;
-          color: #e9d5ff;
-          margin: 0 0 16px;
-          display: flex; align-items: center; gap: 8px;
-        }
-
-        .section-title::after {
-          content: '';
-          flex: 1;
-          height: 1px;
-          background: rgba(167,139,250,0.15);
-        }
-
-        /* ── Quick actions ── */
-        .actions-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-          margin-bottom: 40px;
-        }
-
-        .action-card {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(167,139,250,0.15);
-          border-radius: 16px;
-          padding: 24px 16px;
-          text-align: center;
-          text-decoration: none;
-          cursor: pointer;
-          transition: all 0.25s;
-          display: flex; flex-direction: column; align-items: center; gap: 12px;
-        }
-
-        .action-card:hover {
-          background: rgba(124,58,237,0.12);
-          border-color: rgba(167,139,250,0.4);
-          transform: translateY(-3px);
-          box-shadow: 0 12px 30px rgba(0,0,0,0.3);
-        }
-
-        .action-icon {
-          width: 52px; height: 52px;
-          border-radius: 14px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 22px;
-        }
-
-        .action-label {
-          color: #d1d5db;
-          font-size: 13px;
-          font-weight: 500;
-          line-height: 1.3;
-        }
-
-        /* ── Recent trips placeholder ── */
-        .trips-empty {
-          background: rgba(255,255,255,0.03);
-          border: 1px dashed rgba(167,139,250,0.2);
-          border-radius: 20px;
-          padding: 60px 24px;
-          text-align: center;
-        }
-
-        .trips-empty-icon { font-size: 48px; margin-bottom: 16px; }
-        .trips-empty h3 { color: #9ca3af; font-size: 16px; margin: 0 0 8px; font-weight: 500; }
-        .trips-empty p { color: #6b7280; font-size: 14px; margin: 0 0 24px; }
-
-        .btn-primary {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 12px 24px;
-          background: linear-gradient(135deg, #7c3aed, #4f46e5);
-          color: white;
-          border-radius: 12px;
-          text-decoration: none;
-          font-weight: 600;
-          font-size: 14px;
-          box-shadow: 0 4px 16px rgba(124,58,237,0.35);
-          transition: all 0.2s;
-        }
-
-        .btn-primary:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(124,58,237,0.5);
-        }
-
-        @media (max-width: 768px) {
-          .stats-row, .actions-grid { grid-template-columns: repeat(2, 1fr); }
-          .welcome-banner { flex-direction: column; gap: 20px; text-align: center; }
-          .welcome-left { flex-direction: column; }
-        }
-      `}</style>
-
-      <div className="home-root">
-        <div className="home-content">
-
-          {/* ── Welcome Banner ── */}
-          <div className="welcome-banner">
-            <div className="welcome-left">
-              {avatarSrc ? (
-                <img src={avatarSrc} alt="avatar" className="welcome-avatar" />
-              ) : (
-                <div className="welcome-avatar-placeholder">{initials || '?'}</div>
-              )}
-              <div className="welcome-text">
-                <h1>Bonjour, {user?.name?.split(' ')[0]} 👋</h1>
-                <p>Prêt à partager la route aujourd'hui ?</p>
-              </div>
-            </div>
-            <div className="welcome-badge">
-              <span>🟢</span> En ligne
-            </div>
-          </div>
-
-          {/* ── Stats ── */}
-          <p className="section-title">📊 La plateforme en chiffres</p>
-          <div className="stats-row">
-            {stats.map((s) => (
-              <div key={s.label} className="stat-card">
-                <div className="stat-icon">{s.icon}</div>
-                <div className="stat-value">{s.value}</div>
-                <div className="stat-label">{s.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* ── Quick Actions ── */}
-          <p className="section-title">⚡ Actions rapides</p>
-          <div className="actions-grid">
-            {quickActions.map((a) => (
-              <Link key={a.label} to={a.to} className="action-card">
-                <div className="action-icon" style={{ background: `${a.color}25` }}>
-                  {a.icon}
-                </div>
-                <span className="action-label">{a.label}</span>
-              </Link>
-            ))}
-          </div>
-
-          {/* ── Recent trips ── */}
-          <p className="section-title">🕐 Trajets récents</p>
-          <div className="trips-empty">
-            <div className="trips-empty-icon">🗺️</div>
-            <h3>Aucun trajet pour le moment</h3>
-            <p>Proposez votre premier trajet ou trouvez-en un près de chez vous</p>
-            <Link to="/trips/new" className="btn-primary">
-              ➕ Proposer un trajet
-            </Link>
-          </div>
-
+    <div className="trip-card">
+      {/* Car image header */}
+      <div className="trip-card-img">
+        {carImg
+          ? <img src={carImg} alt="voiture" />
+          : <div className="trip-card-img-placeholder">🚗</div>}
+        <div className="trip-card-badge">
+          {trip.availableSeats > 0
+            ? <span className="badge-green">{trip.availableSeats} place{trip.availableSeats > 1 ? "s" : ""}</span>
+            : <span className="badge-red">Complet</span>}
         </div>
       </div>
-    </>
+
+      <div className="trip-card-body">
+        {/* Route */}
+        <div className="trip-route">
+          <div className="trip-route-point">
+            <span className="route-dot dot-blue" />
+            <span className="route-city">{trip.departure}</span>
+          </div>
+          <div className="route-line" />
+          <div className="trip-route-point">
+            <span className="route-dot dot-amber" />
+            <span className="route-city">{trip.destination}</span>
+          </div>
+        </div>
+
+        {/* Info row */}
+        <div className="trip-info-row">
+          <span className="trip-info-item">📅 {formattedDate}</span>
+          <span className="trip-info-item">⏰ {trip.time}</span>
+          <span className="trip-info-item">{trip.luggage ? "🧳 Bagages OK" : "🚫 Sans bagages"}</span>
+        </div>
+
+        {trip.description && (
+          <p className="trip-description">"{trip.description}"</p>
+        )}
+
+        {/* Footer */}
+        <div className="trip-card-footer">
+          <div className="trip-driver">
+            {driverAvatar
+              ? <img src={driverAvatar} alt="driver" className="driver-avatar" />
+              : <div className="driver-avatar-init">
+                  {trip.driver?.firstName?.[0]}{trip.driver?.lastName?.[0]}
+                </div>}
+            <span className="driver-name">
+              {trip.driver?.firstName} {trip.driver?.lastName}
+            </span>
+          </div>
+          <div className="trip-price-action">
+            <span className="trip-price">{trip.price} <small>DT</small></span>
+            {!isDriver && trip.availableSeats > 0 && user && (
+              <button className="btn-reserve" onClick={() => onReserve(trip)}>
+                Réserver
+              </button>
+            )}
+            {!user && (
+              <span className="trip-login-hint">Connectez-vous pour réserver</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
-export default Home;
+// ── Modal réservation ────────────────────────────────────────────────────────
+const ReserveModal = ({ trip, onClose, onConfirm }) => {
+  const [seats, setSeats] = useState(1);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    setError(null);
+    const result = await onConfirm(trip._id, seats, message);
+    setLoading(false);
+    if (result.error) setError(result.message);
+    else onClose(true);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={() => onClose(false)}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <button className="modal-close" onClick={() => onClose(false)}>✕</button>
+        <h2 className="modal-title">Réserver ce trajet</h2>
+
+        <div className="modal-route">
+          <span className="modal-city">{trip.departure}</span>
+          <span className="modal-arrow">→</span>
+          <span className="modal-city">{trip.destination}</span>
+        </div>
+
+        <div className="modal-details">
+          <span>📅 {new Date(trip.date).toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long" })}</span>
+          <span>⏰ {trip.time}</span>
+          <span>💰 {trip.price} DT / place</span>
+        </div>
+
+        <div className="modal-field">
+          <label>Nombre de places</label>
+          <div className="seats-selector">
+            <button onClick={() => setSeats(Math.max(1, seats - 1))}>−</button>
+            <span>{seats}</span>
+            <button onClick={() => setSeats(Math.min(trip.availableSeats, seats + 1))}>+</button>
+          </div>
+          <p className="seats-total">Total : <strong>{seats * trip.price} DT</strong></p>
+        </div>
+
+        <div className="modal-field">
+          <label>Message au conducteur <span style={{ color: "#94a3b8" }}>(facultatif)</span></label>
+          <textarea
+            className="modal-textarea"
+            placeholder="Ex: Je serai au point de départ à l'heure, j'ai un petit sac..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={3}
+          />
+        </div>
+
+        {error && <div className="modal-error">⚠️ {error}</div>}
+
+        <button className="btn-confirm" onClick={handleConfirm} disabled={loading}>
+          {loading ? "Envoi en cours..." : `Confirmer la réservation — ${seats * trip.price} DT`}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ── Page principale ──────────────────────────────────────────────────────────
+export default function Home() {
+  const { trips, loading, fetchTrips, createReservation } = useContext(TripContext);
+  const navigate = useNavigate();
+
+  const [filters, setFilters] = useState({ departure: "", destination: "", date: "" });
+  const [selectedTrip, setSelectedTrip] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
+
+  useEffect(() => { fetchTrips(); }, []);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const clean = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
+    fetchTrips(clean);
+  };
+
+  const handleReserve = (trip) => setSelectedTrip(trip);
+
+  const handleModalClose = (success) => {
+    setSelectedTrip(null);
+    if (success) {
+      setSuccessMsg("Réservation envoyée ! Le conducteur va vous répondre par email. ✅");
+      setTimeout(() => setSuccessMsg(null), 5000);
+    }
+  };
+
+  return (
+    <div className="home-page">
+
+      {/* ── Hero / Search ─────────────────────────────────────────────── */}
+      <div className="home-hero">
+        <div className="hero-bg" />
+        <div className="hero-overlay" />
+        <div className="hero-content">
+          <h1 className="hero-title">
+            Où allez-vous <span>aujourd'hui</span> ?
+          </h1>
+          <p className="hero-sub">Des centaines de trajets disponibles en Tunisie</p>
+
+          <form className="search-bar" onSubmit={handleSearch}>
+            <div className="search-field">
+              <span className="search-icon">📍</span>
+              <input
+                placeholder="Départ (ex: Tunis)"
+                value={filters.departure}
+                onChange={(e) => setFilters({ ...filters, departure: e.target.value })}
+              />
+            </div>
+            <div className="search-divider" />
+            <div className="search-field">
+              <span className="search-icon">🎯</span>
+              <input
+                placeholder="Destination (ex: Sfax)"
+                value={filters.destination}
+                onChange={(e) => setFilters({ ...filters, destination: e.target.value })}
+              />
+            </div>
+            <div className="search-divider" />
+            <div className="search-field">
+              <span className="search-icon">📅</span>
+              <input
+                type="date"
+                value={filters.date}
+                onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+              />
+            </div>
+            <button type="submit" className="search-btn">Rechercher</button>
+          </form>
+        </div>
+      </div>
+
+      {/* ── Stats bar ─────────────────────────────────────────────────── */}
+      <div className="stats-bar">
+        {[["🚗", trips.length, "Trajets disponibles"],
+          ["👥", "1 900+", "Membres actifs"],
+          ["📍", "24+", "Villes couvertes"]].map(([e, n, l]) => (
+          <div className="stat-item" key={l}>
+            <span className="stat-emoji">{e}</span>
+            <strong className="stat-num">{n}</strong>
+            <span className="stat-label">{l}</span>
+          </div>
+        ))}
+        <button className="btn-post-trip" onClick={() => navigate("/publish-trip")}>
+          + Publier un trajet
+        </button>
+      </div>
+
+      {/* ── Success toast ─────────────────────────────────────────────── */}
+      {successMsg && (
+        <div className="success-toast">{successMsg}</div>
+      )}
+
+      {/* ── Trips grid ────────────────────────────────────────────────── */}
+      <div className="trips-section">
+        <div className="trips-header">
+          <h2>{trips.length > 0 ? `${trips.length} trajet${trips.length > 1 ? "s" : ""} disponible${trips.length > 1 ? "s" : ""}` : "Aucun trajet trouvé"}</h2>
+          <button className="btn-reset" onClick={() => { setFilters({ departure: "", destination: "", date: "" }); fetchTrips(); }}>
+            Réinitialiser
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="loading-grid">
+            {[1,2,3,4,5,6].map(i => <div key={i} className="trip-card-skeleton" />)}
+          </div>
+        ) : (
+          <div className="trips-grid">
+            {trips.map((trip) => (
+              <TripCard key={trip._id} trip={trip} onReserve={handleReserve} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Reserve modal ─────────────────────────────────────────────── */}
+      {selectedTrip && (
+        <ReserveModal
+          trip={selectedTrip}
+          onClose={handleModalClose}
+          onConfirm={createReservation}
+        />
+      )}
+    </div>
+  );
+}
