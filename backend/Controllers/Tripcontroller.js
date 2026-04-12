@@ -1,4 +1,4 @@
-const tripModel        = require("../Models/Tripmodel");
+const tripModel        = require("../Models/tripModel");
 const reservationModel = require("../Models/reservationModel");
 const userModel        = require("../Models/userModel");
 const multer           = require("multer");
@@ -6,7 +6,6 @@ const path             = require("path");
 const fs               = require("fs");
 const { sendTripEmail } = require("../emailService");
 
-// ─── Multer pour les images de voiture ───────────────────────────────────────
 const uploadDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -23,13 +22,8 @@ const fileFilter = (req, file, cb) => {
   cb(ok ? null : new Error("Images only"), ok);
 };
 
-const uploadCar = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-});
+const uploadCar = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
 
-// ─── AUTH MIDDLEWARE (vérifier JWT) ──────────────────────────────────────────
 const jwt = require("jsonwebtoken");
 
 const protect = (req, res, next) => {
@@ -44,46 +38,22 @@ const protect = (req, res, next) => {
   }
 };
 
-// ─── CRÉER UN TRAJET ─────────────────────────────────────────────────────────
-// POST /api/trips
 const createTrip = async (req, res) => {
   try {
-    const {
-      departure, destination, date, time,
-      licensePlate, price, seats, luggage, description,
-    } = req.body;
-
-    // Validation
-    if (!departure || !destination || !date || !time || !licensePlate || !price || !seats) {
+    const { departure, destination, date, time, licensePlate, price, seats, luggage, description } = req.body;
+    if (!departure || !destination || !date || !time || !licensePlate || !price || !seats)
       return res.status(400).json({ message: "Tous les champs obligatoires sont requis" });
-    }
-
-    // Date ne peut pas être dans le passé
-    if (new Date(date) < new Date()) {
+    if (new Date(date) < new Date())
       return res.status(400).json({ message: "La date du trajet ne peut pas être dans le passé" });
-    }
 
     const carImage = req.file ? `/uploads/${req.file.filename}` : "";
-
     const trip = await tripModel.create({
-      driver:         req.userId,
-      departure:      departure.trim(),
-      destination:    destination.trim(),
-      date,
-      time,
-      carImage,
-      licensePlate,
-      price:          Number(price),
-      seats:          Number(seats),
-      availableSeats: Number(seats), // au départ = seats total
-      luggage:        luggage === "true" || luggage === true,
-      description:    description || "",
-      status:         "active",
+      driver: req.userId, departure: departure.trim(), destination: destination.trim(),
+      date, time, carImage, licensePlate, price: Number(price), seats: Number(seats),
+      availableSeats: Number(seats), luggage: luggage === "true" || luggage === true,
+      description: description || "", status: "active",
     });
-
-    // Populate conducteur pour la réponse
     const populated = await tripModel.findById(trip._id).populate("driver", "firstName lastName image");
-
     res.status(201).json({ message: "Trajet publié ✅", trip: populated });
   } catch (error) {
     console.error("CreateTrip Error:", error);
@@ -91,26 +61,18 @@ const createTrip = async (req, res) => {
   }
 };
 
-// ─── OBTENIR TOUS LES TRAJETS (page accueil) ─────────────────────────────────
-// GET /api/trips
 const getAllTrips = async (req, res) => {
   try {
-    const { departure, destination, date, minPrice, maxPrice } = req.query;
-
-    // Filtre dynamique
+    const { departure, destination, date, minPrice, maxPrice, driver } = req.query;
     const filter = { status: "active", availableSeats: { $gt: 0 } };
+    if (driver)      filter.driver      = driver;
+    if (departure)   filter.departure   = { $regex: departure,   $options: "i" };
+    if (destination) filter.destination = { $regex: destination, $options: "i" };
+    if (date)        filter.date        = { $gte: new Date(date), $lt: new Date(new Date(date).getTime() + 86400000) };
+    if (minPrice)    filter.price       = { ...filter.price, $gte: Number(minPrice) };
+    if (maxPrice)    filter.price       = { ...filter.price, $lte: Number(maxPrice) };
 
-    if (departure)    filter.departure    = { $regex: departure,    $options: "i" };
-    if (destination)  filter.destination  = { $regex: destination,  $options: "i" };
-    if (date)         filter.date         = { $gte: new Date(date), $lt: new Date(new Date(date).getTime() + 86400000) };
-    if (minPrice)     filter.price        = { ...filter.price, $gte: Number(minPrice) };
-    if (maxPrice)     filter.price        = { ...filter.price, $lte: Number(maxPrice) };
-
-    const trips = await tripModel
-      .find(filter)
-      .populate("driver", "firstName lastName image")
-      .sort({ date: 1, time: 1 }); // plus proche en premier
-
+    const trips = await tripModel.find(filter).populate("driver", "firstName lastName image").sort({ date: 1, time: 1 });
     res.status(200).json(trips);
   } catch (error) {
     console.error("GetAllTrips Error:", error);
@@ -118,21 +80,11 @@ const getAllTrips = async (req, res) => {
   }
 };
 
-// ─── OBTENIR UN TRAJET PAR ID ─────────────────────────────────────────────────
-// GET /api/trips/:id
 const getTripById = async (req, res) => {
   try {
-    const trip = await tripModel
-      .findById(req.params.id)
-      .populate("driver", "firstName lastName image phone email");
-
+    const trip = await tripModel.findById(req.params.id).populate("driver", "firstName lastName image phone email");
     if (!trip) return res.status(404).json({ message: "Trajet introuvable" });
-
-    // Récupérer les réservations de ce trajet (pour le conducteur)
-    const reservations = await reservationModel
-      .find({ trip: req.params.id })
-      .populate("passenger", "firstName lastName image phone");
-
+    const reservations = await reservationModel.find({ trip: req.params.id }).populate("passenger", "firstName lastName image phone");
     res.status(200).json({ trip, reservations });
   } catch (error) {
     console.error("GetTripById Error:", error);
@@ -140,26 +92,13 @@ const getTripById = async (req, res) => {
   }
 };
 
-// ─── MES TRAJETS (conducteur) ─────────────────────────────────────────────────
-// GET /api/trips/my-trips
 const getMyTrips = async (req, res) => {
   try {
-    const trips = await tripModel
-      .find({ driver: req.userId })
-      .sort({ date: -1 });
-
-    // Pour chaque trajet, compter les réservations en attente
-    const tripsWithCount = await Promise.all(
-      trips.map(async (trip) => {
-        const pendingCount = await reservationModel.countDocuments({
-          trip: trip._id,
-          status: "pending",
-          driverRead: false,
-        });
-        return { ...trip.toObject(), pendingReservations: pendingCount };
-      })
-    );
-
+    const trips = await tripModel.find({ driver: req.userId }).sort({ date: -1 });
+    const tripsWithCount = await Promise.all(trips.map(async (trip) => {
+      const pendingCount = await reservationModel.countDocuments({ trip: trip._id, status: "pending", driverRead: false });
+      return { ...trip.toObject(), pendingReservations: pendingCount };
+    }));
     res.status(200).json(tripsWithCount);
   } catch (error) {
     console.error("GetMyTrips Error:", error);
@@ -167,22 +106,27 @@ const getMyTrips = async (req, res) => {
   }
 };
 
-// ─── ANNULER UN TRAJET ────────────────────────────────────────────────────────
-// PATCH /api/trips/:id/cancel
+// FIX: Block cancellation if any passenger has paid
 const cancelTrip = async (req, res) => {
   try {
     const trip = await tripModel.findById(req.params.id);
     if (!trip) return res.status(404).json({ message: "Trajet introuvable" });
+    if (trip.driver.toString() !== req.userId) return res.status(403).json({ message: "Non autorisé" });
+    if (trip.status === "cancelled") return res.status(400).json({ message: "Ce trajet est déjà annulé" });
 
-    // Seul le conducteur peut annuler
-    if (trip.driver.toString() !== req.userId) {
-      return res.status(403).json({ message: "Non autorisé" });
+    // Block if any paid reservations exist
+    const paidCount = await reservationModel.countDocuments({
+      trip: trip._id, paymentStatus: "paid", status: { $nin: ["cancelled"] },
+    });
+    if (paidCount > 0) {
+      return res.status(400).json({
+        message: `Impossible d'annuler : ${paidCount} passager(s) ont déjà payé pour ce trajet. Contactez-les directement.`,
+      });
     }
 
     trip.status = "cancelled";
     await trip.save();
 
-    // Notifier tous les passagers avec réservation acceptée/en attente
     const reservations = await reservationModel
       .find({ trip: trip._id, status: { $in: ["pending", "accepted"] } })
       .populate("passenger", "email firstName");
@@ -190,31 +134,18 @@ const cancelTrip = async (req, res) => {
     for (const reservation of reservations) {
       reservation.status = "cancelled";
       await reservation.save();
-
-      // Envoyer email d'annulation au passager
       if (reservation.passenger?.email) {
-        await sendTripEmail(
-          reservation.passenger.email,
-          reservation.passenger.firstName,
-          "trip_cancelled",
-          { departure: trip.departure, destination: trip.destination, date: trip.date }
-        );
+        await sendTripEmail(reservation.passenger.email, reservation.passenger.firstName, "trip_cancelled", {
+          departure: trip.departure, destination: trip.destination, date: trip.date,
+        });
       }
     }
 
-    res.status(200).json({ message: "Trajet annulé ✅" });
+    res.status(200).json({ message: "Trajet annulé ✅. Les passagers ont été notifiés par email." });
   } catch (error) {
     console.error("CancelTrip Error:", error);
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
 
-module.exports = {
-  uploadCar,
-  protect,
-  createTrip,
-  getAllTrips,
-  getTripById,
-  getMyTrips,
-  cancelTrip,
-};
+module.exports = { uploadCar, protect, createTrip, getAllTrips, getTripById, getMyTrips, cancelTrip };

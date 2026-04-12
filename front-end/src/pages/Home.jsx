@@ -1,25 +1,97 @@
 import { useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { TripContext } from "../context/TripContext";
 import { AuthContext } from "../context/AuthContext";
+import { baseUrl } from "../utils/services";
 import "./Home.css";
 
 const baseImgUrl = "http://localhost:5000";
 
-const TripCard = ({ trip, onReserve }) => {
+// ── User Search Bar ──────────────────────────────────────────────────────────
+const UserSearchBar = () => {
+  const [query, setQuery]     = useState("");
+  const [results, setResults] = useState([]);
+  const [open, setOpen]       = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSearch = async (val) => {
+    setQuery(val);
+    if (!val.trim() || val.length < 2) { setResults([]); setOpen(false); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}/users/search?q=${encodeURIComponent(val)}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("Token")}` },
+      });
+      const data = await res.json();
+      setResults(Array.isArray(data) ? data.slice(0, 5) : []);
+      setOpen(true);
+    } catch { setResults([]); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="user-search-wrap" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false); }}>
+      <div className="user-search-input-row">
+        <span className="user-search-icon">👤</span>
+        <input
+          className="user-search-input"
+          placeholder="Chercher un membre..."
+          value={query}
+          onChange={(e) => handleSearch(e.target.value)}
+          onFocus={() => results.length > 0 && setOpen(true)}
+        />
+        {loading && <span className="user-search-spinner" />}
+      </div>
+
+      {open && results.length > 0 && (
+        <div className="user-search-dropdown">
+          {results.map((u) => {
+            const avatarSrc = u.image ? `${baseImgUrl}${u.image}` : null;
+            const initials  = `${u.firstName?.[0] || ""}${u.lastName?.[0] || ""}`.toUpperCase();
+            return (
+              <Link
+                key={u._id}
+                to={`/profile/${u._id}`}
+                className="user-search-result"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { setOpen(false); setQuery(""); }}
+              >
+                <div className="user-search-avatar">
+                  {avatarSrc
+                    ? <img src={avatarSrc} alt={u.firstName} />
+                    : <div className="user-search-avatar-init">{initials}</div>}
+                </div>
+                <div className="user-search-info">
+                  <strong>{u.firstName} {u.lastName}</strong>
+                  <span>Voir le profil →</span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {open && results.length === 0 && query.length >= 2 && !loading && (
+        <div className="user-search-dropdown">
+          <div className="user-search-empty">Aucun membre trouvé</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Trip Card ────────────────────────────────────────────────────────────────
+const TripCard = ({ trip, onReserve, onCardClick }) => {
   const { user } = useContext(AuthContext);
-  const isDriver = user?.id === trip.driver?._id;
-  const driverAvatar = trip.driver?.image
-    ? `${baseImgUrl}${trip.driver.image}`
-    : null;
-  const carImg = trip.carImage ? `${baseImgUrl}${trip.carImage}` : null;
+  const isDriver    = user?.id === trip.driver?._id;
+  const driverAvatar = trip.driver?.image ? `${baseImgUrl}${trip.driver.image}` : null;
+  const carImg       = trip.carImage ? `${baseImgUrl}${trip.carImage}` : null;
   const formattedDate = new Date(trip.date).toLocaleDateString("fr-FR", {
     weekday: "short", day: "numeric", month: "short",
   });
 
   return (
-    <div className="trip-card">
-      {/* Car image header */}
+    <div className="trip-card" onClick={() => onCardClick && onCardClick(trip._id)} style={{ cursor: "pointer" }}>
       <div className="trip-card-img">
         {carImg
           ? <img src={carImg} alt="voiture" />
@@ -32,7 +104,6 @@ const TripCard = ({ trip, onReserve }) => {
       </div>
 
       <div className="trip-card-body">
-        {/* Route */}
         <div className="trip-route">
           <div className="trip-route-point">
             <span className="route-dot dot-blue" />
@@ -45,7 +116,6 @@ const TripCard = ({ trip, onReserve }) => {
           </div>
         </div>
 
-        {/* Info row */}
         <div className="trip-info-row">
           <span className="trip-info-item">📅 {formattedDate}</span>
           <span className="trip-info-item">⏰ {trip.time}</span>
@@ -56,28 +126,28 @@ const TripCard = ({ trip, onReserve }) => {
           <p className="trip-description">"{trip.description}"</p>
         )}
 
-        {/* Footer */}
         <div className="trip-card-footer">
-          <div className="trip-driver">
-            {driverAvatar
-              ? <img src={driverAvatar} alt="driver" className="driver-avatar" />
-              : <div className="driver-avatar-init">
-                  {trip.driver?.firstName?.[0]}{trip.driver?.lastName?.[0]}
-                </div>}
-            <span className="driver-name">
-              {trip.driver?.firstName} {trip.driver?.lastName}
-            </span>
+          <div className="trip-driver" onClick={(e) => e.stopPropagation()}>
+            <Link to={`/profile/${trip.driver?._id}`} style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+              {driverAvatar
+                ? <img src={driverAvatar} alt="driver" className="driver-avatar" />
+                : <div className="driver-avatar-init">
+                    {trip.driver?.firstName?.[0]}{trip.driver?.lastName?.[0]}
+                  </div>}
+              <span className="driver-name">{trip.driver?.firstName} {trip.driver?.lastName}</span>
+            </Link>
           </div>
           <div className="trip-price-action">
             <span className="trip-price">{trip.price} <small>DT</small></span>
             {!isDriver && trip.availableSeats > 0 && user && (
-              <button className="btn-reserve" onClick={() => onReserve(trip)}>
+              <button
+                className="btn-reserve"
+                onClick={(e) => { e.stopPropagation(); onReserve(trip); }}
+              >
                 Réserver
               </button>
             )}
-            {!user && (
-              <span className="trip-login-hint">Connectez-vous pour réserver</span>
-            )}
+            {!user && <span className="trip-login-hint">Connectez-vous pour réserver</span>}
           </div>
         </div>
       </div>
@@ -85,12 +155,12 @@ const TripCard = ({ trip, onReserve }) => {
   );
 };
 
-// ── Modal réservation ────────────────────────────────────────────────────────
+// ── Reserve Modal ────────────────────────────────────────────────────────────
 const ReserveModal = ({ trip, onClose, onConfirm }) => {
-  const [seats, setSeats] = useState(1);
+  const [seats, setSeats]   = useState(1);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError]   = useState(null);
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -106,19 +176,16 @@ const ReserveModal = ({ trip, onClose, onConfirm }) => {
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={() => onClose(false)}>✕</button>
         <h2 className="modal-title">Réserver ce trajet</h2>
-
         <div className="modal-route">
           <span className="modal-city">{trip.departure}</span>
           <span className="modal-arrow">→</span>
           <span className="modal-city">{trip.destination}</span>
         </div>
-
         <div className="modal-details">
           <span>📅 {new Date(trip.date).toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long" })}</span>
           <span>⏰ {trip.time}</span>
           <span>💰 {trip.price} DT / place</span>
         </div>
-
         <div className="modal-field">
           <label>Nombre de places</label>
           <div className="seats-selector">
@@ -128,7 +195,6 @@ const ReserveModal = ({ trip, onClose, onConfirm }) => {
           </div>
           <p className="seats-total">Total : <strong>{seats * trip.price} DT</strong></p>
         </div>
-
         <div className="modal-field">
           <label>Message au conducteur <span style={{ color: "#94a3b8" }}>(facultatif)</span></label>
           <textarea
@@ -139,11 +205,9 @@ const ReserveModal = ({ trip, onClose, onConfirm }) => {
             rows={3}
           />
         </div>
-
         {error && <div className="modal-error">⚠️ {error}</div>}
-
         <button className="btn-confirm" onClick={handleConfirm} disabled={loading}>
-          {loading ? "Envoi en cours..." : `Confirmer la réservation — ${seats * trip.price} DT`}
+          {loading ? "Envoi en cours..." : `Confirmer — ${seats * trip.price} DT`}
         </button>
       </div>
     </div>
@@ -153,9 +217,10 @@ const ReserveModal = ({ trip, onClose, onConfirm }) => {
 // ── Page principale ──────────────────────────────────────────────────────────
 export default function Home() {
   const { trips, loading, fetchTrips, createReservation } = useContext(TripContext);
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [filters, setFilters] = useState({ departure: "", destination: "", date: "" });
+  const [filters, setFilters]       = useState({ departure: "", destination: "", date: "" });
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
@@ -166,8 +231,6 @@ export default function Home() {
     const clean = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
     fetchTrips(clean);
   };
-
-  const handleReserve = (trip) => setSelectedTrip(trip);
 
   const handleModalClose = (success) => {
     setSelectedTrip(null);
@@ -180,16 +243,13 @@ export default function Home() {
   return (
     <div className="home-page">
 
-      {/* ── Hero / Search ─────────────────────────────────────────────── */}
+      {/* ── Hero / Search ─────────────────────────────────────────── */}
       <div className="home-hero">
         <div className="hero-bg" />
         <div className="hero-overlay" />
         <div className="hero-content">
-          <h1 className="hero-title">
-            Où allez-vous <span>aujourd'hui</span> ?
-          </h1>
+          <h1 className="hero-title">Où allez-vous <span>aujourd'hui</span> ?</h1>
           <p className="hero-sub">Des centaines de trajets disponibles en Tunisie</p>
-
           <form className="search-bar" onSubmit={handleSearch}>
             <div className="search-field">
               <span className="search-icon">📍</span>
@@ -222,31 +282,39 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Stats bar ─────────────────────────────────────────────────── */}
+      {/* ── Stats bar + User Search ────────────────────────────────── */}
       <div className="stats-bar">
-        {[["🚗", trips.length, "Trajets disponibles"],
-          ["👥", "1 900+", "Membres actifs"],
-          ["📍", "24+", "Villes couvertes"]].map(([e, n, l]) => (
+        {[
+          ["🚗", trips.length, "Trajets disponibles"],
+          ["👥", "1 900+",     "Membres actifs"],
+          ["📍", "24+",        "Villes couvertes"],
+        ].map(([e, n, l]) => (
           <div className="stat-item" key={l}>
             <span className="stat-emoji">{e}</span>
             <strong className="stat-num">{n}</strong>
             <span className="stat-label">{l}</span>
           </div>
         ))}
+
+        {/* ── User search — visible only when logged in ── */}
+        {user && <UserSearchBar />}
+
         <button className="btn-post-trip" onClick={() => navigate("/publish-trip")}>
           + Publier un trajet
         </button>
       </div>
 
-      {/* ── Success toast ─────────────────────────────────────────────── */}
-      {successMsg && (
-        <div className="success-toast">{successMsg}</div>
-      )}
+      {/* ── Success toast ─────────────────────────────────────────── */}
+      {successMsg && <div className="success-toast">{successMsg}</div>}
 
-      {/* ── Trips grid ────────────────────────────────────────────────── */}
+      {/* ── Trips grid ────────────────────────────────────────────── */}
       <div className="trips-section">
         <div className="trips-header">
-          <h2>{trips.length > 0 ? `${trips.length} trajet${trips.length > 1 ? "s" : ""} disponible${trips.length > 1 ? "s" : ""}` : "Aucun trajet trouvé"}</h2>
+          <h2>
+            {trips.length > 0
+              ? `${trips.length} trajet${trips.length > 1 ? "s" : ""} disponible${trips.length > 1 ? "s" : ""}`
+              : "Aucun trajet trouvé"}
+          </h2>
           <button className="btn-reset" onClick={() => { setFilters({ departure: "", destination: "", date: "" }); fetchTrips(); }}>
             Réinitialiser
           </button>
@@ -259,13 +327,18 @@ export default function Home() {
         ) : (
           <div className="trips-grid">
             {trips.map((trip) => (
-              <TripCard key={trip._id} trip={trip} onReserve={handleReserve} />
+              <TripCard
+                key={trip._id}
+                trip={trip}
+                onReserve={setSelectedTrip}
+                onCardClick={(id) => navigate(`/trips/${id}`)}
+              />
             ))}
           </div>
         )}
       </div>
 
-      {/* ── Reserve modal ─────────────────────────────────────────────── */}
+      {/* ── Reserve modal ─────────────────────────────────────────── */}
       {selectedTrip && (
         <ReserveModal
           trip={selectedTrip}
