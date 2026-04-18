@@ -63,8 +63,16 @@ const createTrip = async (req, res) => {
 
 const getAllTrips = async (req, res) => {
   try {
-    const { departure, destination, date, minPrice, maxPrice, driver } = req.query;
-    const filter = { status: "active", availableSeats: { $gt: 0 } };
+    const { departure, destination, date, minPrice, maxPrice, driver, includeAllStatuses } = req.query;
+    const filter = {};
+
+    // Home page should only show active trips with seats.
+    // Driver profile can opt in to see all publications (including completed/cancelled).
+    if (includeAllStatuses !== "true") {
+      filter.status = "active";
+      filter.availableSeats = { $gt: 0 };
+    }
+
     if (driver)      filter.driver      = driver;
     if (departure)   filter.departure   = { $regex: departure,   $options: "i" };
     if (destination) filter.destination = { $regex: destination, $options: "i" };

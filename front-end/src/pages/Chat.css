@@ -378,6 +378,7 @@
 
 /* Input area */
 .chat-input-area {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 10px;

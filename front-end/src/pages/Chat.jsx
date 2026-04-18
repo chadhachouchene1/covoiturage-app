@@ -1,11 +1,14 @@
 import { useContext, useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { io } from "socket.io-client";
+import { MapContainer, TileLayer, CircleMarker } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import { AuthContext } from "../context/AuthContext";
 import "./Chat.css";
 
 const BASE_URL     = "http://localhost:5000";
 const SOCKET_URL   = "http://localhost:5000";
+const QUICK_EMOJIS = ["😀", "😂", "😍", "👍", "🙏", "🔥", "🎉", "💯", "🤝", "❤️", "😎", "😢"];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const getToken  = () => localStorage.getItem("Token");
@@ -39,6 +42,7 @@ const formatTime = (date) => {
 // ── Composant principal ───────────────────────────────────────────────────────
 export default function Chat() {
   const { user } = useContext(AuthContext);
+  const currentUserId = user?.id || user?._id;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -57,16 +61,27 @@ export default function Chat() {
   const [searchQ, setSearchQ]             = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [sendingLocation, setSendingLocation] = useState(false);
+
+  const notifyMessagesRead = useCallback((conversationId, senderId) => {
+    if (!socketRef.current || !conversationId || !currentUserId || !senderId) return;
+    socketRef.current.emit("messages:read", {
+      conversationId,
+      readerId: currentUserId,
+      senderId,
+    });
+  }, [currentUserId]);
 
   // ── Socket setup ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (!user) return;
+    if (!user || !currentUserId) return;
 
     const socket = io(SOCKET_URL, { transports: ["websocket"] });
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      socket.emit("user:join", user.id);
+      socket.emit("user:join", currentUserId);
     });
 
     socket.on("users:online", (ids) => setOnlineUsers(ids));
@@ -77,6 +92,7 @@ export default function Chat() {
         if (activeConvRef.current?._id === msg.conversationId) {
           // éviter les doublons
           if (prev.some(m => m._id === msg._id)) return prev;
+          notifyMessagesRead(msg.conversationId, msg.senderId);
           return [...prev, msg];
         }
         return prev;
@@ -106,6 +122,16 @@ export default function Chat() {
       );
     });
 
+    socket.on("messages:read", ({ conversationId }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.conversationId === conversationId && m.senderId === currentUserId
+            ? { ...m, read: true, readAt: new Date().toISOString() }
+            : m
+        )
+      );
+    });
+
     socket.on("typing:start", ({ conversationId, senderId }) => {
       if (activeConvRef.current?._id === conversationId) {
         setTypingFrom(senderId);
@@ -119,7 +145,7 @@ export default function Chat() {
     });
 
     return () => socket.disconnect();
-  }, [user]);
+  }, [user, currentUserId, notifyMessagesRead]);
 
   // Ref vers activeConv pour les closures socket
   const activeConvRef = useRef(activeConv);
@@ -181,6 +207,9 @@ export default function Chat() {
       setMessages(Array.isArray(data) ? data : []);
       // Reset badge non lus
       setConversations(prev => prev.map(c => c._id === convId ? { ...c, unreadCount: 0 } : c));
+      const conv = conversations.find((c) => c._id === convId);
+      const peer = conv?.members?.find((m) => m._id !== currentUserId);
+      if (peer?._id) notifyMessagesRead(convId, peer._id);
     } catch {}
     setLoadingMsgs(false);
   };
@@ -194,20 +223,48 @@ export default function Chat() {
   const sendMessage = () => {
     if (!text.trim() || !activeConv || !socketRef.current) return;
 
-    const receiver = activeConv.members.find(m => m._id !== user.id);
+    const receiver = activeConv.members.find(m => m._id !== currentUserId);
     socketRef.current.emit("message:send", {
       conversationId: activeConv._id,
-      senderId:       user.id,
+      senderId:       currentUserId,
       receiverId:     receiver._id,
       text:           text.trim(),
+      messageType:    "text",
     });
     setText("");
+    setShowEmojiPicker(false);
     // Arrêter le typing
     socketRef.current.emit("typing:stop", {
       conversationId: activeConv._id,
-      senderId: user.id,
+      senderId: currentUserId,
       receiverId: receiver._id,
     });
+  };
+
+  const sendLocationMessage = () => {
+    if (!activeConv || !socketRef.current || !navigator.geolocation || sendingLocation) return;
+    const receiver = activeConv.members.find(m => m._id !== currentUserId);
+    if (!receiver?._id) return;
+
+    setSendingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        socketRef.current?.emit("message:send", {
+          conversationId: activeConv._id,
+          senderId: currentUserId,
+          receiverId: receiver._id,
+          messageType: "location",
+          text: "📍 Localisation partagée",
+          location: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          },
+        });
+        setSendingLocation(false);
+      },
+      () => setSendingLocation(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const handleKeyDown = (e) => {
@@ -221,20 +278,24 @@ export default function Chat() {
   const handleTextChange = (e) => {
     setText(e.target.value);
     if (!activeConv || !socketRef.current) return;
-    const receiver = activeConv.members.find(m => m._id !== user.id);
+    const receiver = activeConv.members.find(m => m._id !== currentUserId);
     socketRef.current.emit("typing:start", {
       conversationId: activeConv._id,
-      senderId: user.id,
+      senderId: currentUserId,
       receiverId: receiver._id,
     });
     clearTimeout(typingTimerRef.current);
     typingTimerRef.current = setTimeout(() => {
       socketRef.current?.emit("typing:stop", {
         conversationId: activeConv._id,
-        senderId: user.id,
+        senderId: currentUserId,
         receiverId: receiver._id,
       });
     }, 1500);
+  };
+
+  const appendEmoji = (emoji) => {
+    setText((prev) => `${prev}${emoji}`);
   };
 
   // ── Recherche utilisateurs ────────────────────────────────────────────
@@ -247,7 +308,7 @@ export default function Chat() {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
         const data = await res.json();
-        setSearchResults(Array.isArray(data) ? data.filter(u => u._id !== user.id) : []);
+        setSearchResults(Array.isArray(data) ? data.filter(u => u._id !== currentUserId) : []);
       } catch {}
       setSearchLoading(false);
     }, 300);
@@ -256,7 +317,7 @@ export default function Chat() {
 
   // ── Interlocuteur de la conv active ──────────────────────────────────
   const getOtherMember = (conv) =>
-    conv?.members?.find(m => m._id !== user.id);
+    conv?.members?.find(m => m._id !== currentUserId);
 
   const activePeer = activeConv ? getOtherMember(activeConv) : null;
   const isPeerOnline = activePeer ? onlineUsers.includes(activePeer._id) : false;
@@ -339,7 +400,7 @@ export default function Chat() {
                     <div className="chat-conv-row">
                       <span className="chat-conv-last">
                         {lastMsg
-                          ? (lastMsg.senderId === user.id ? "Vous : " : "") + lastMsg.text.slice(0, 40) + (lastMsg.text.length > 40 ? "…" : "")
+                          ? (lastMsg.senderId === currentUserId ? "Vous : " : "") + (lastMsg.messageType === "location" ? "📍 Localisation partagée" : lastMsg.text.slice(0, 40) + (lastMsg.text.length > 40 ? "…" : ""))
                           : "Démarrer la conversation"}
                       </span>
                       {conv.unreadCount > 0 && (
@@ -394,23 +455,55 @@ export default function Chat() {
                     ) : (
                       <div
                         key={item.data._id}
-                        className={`chat-msg-wrap ${item.data.senderId === user.id ? "chat-msg-mine" : "chat-msg-theirs"}`}
+                        className={`chat-msg-wrap ${item.data.senderId === currentUserId ? "chat-msg-mine" : "chat-msg-theirs"}`}
                       >
-                        {item.data.senderId !== user.id && (
+                        {item.data.senderId !== currentUserId && (
                           <Avatar user={activePeer} size={28} />
                         )}
                         <div className="chat-bubble-wrap">
-                          <div className={`chat-bubble ${item.data.senderId === user.id ? "chat-bubble-mine" : "chat-bubble-theirs"}`}>
-                            {item.data.text}
+                          <div className={`chat-bubble ${item.data.senderId === currentUserId ? "chat-bubble-mine" : "chat-bubble-theirs"}`}>
+                            {item.data.messageType === "location" && item.data.location?.lat && item.data.location?.lng ? (
+                              <div style={{ width: 240 }}>
+                                <div style={{ marginBottom: 8, fontWeight: 600 }}>📍 Localisation</div>
+                                <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(15,23,42,0.1)" }}>
+                                  <MapContainer
+                                    center={[item.data.location.lat, item.data.location.lng]}
+                                    zoom={14}
+                                    style={{ width: "100%", height: 160 }}
+                                    scrollWheelZoom={false}
+                                    dragging={false}
+                                    doubleClickZoom={false}
+                                    zoomControl={false}
+                                    attributionControl={false}
+                                  >
+                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                    <CircleMarker center={[item.data.location.lat, item.data.location.lng]} radius={8} pathOptions={{ color: "#2563eb", fillColor: "#2563eb", fillOpacity: 0.8 }} />
+                                  </MapContainer>
+                                </div>
+                                <a
+                                  href={`https://www.openstreetmap.org/?mlat=${item.data.location.lat}&mlon=${item.data.location.lng}#map=16/${item.data.location.lat}/${item.data.location.lng}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{ fontSize: 12, color: item.data.senderId === currentUserId ? "#fff" : "#2563eb", textDecoration: "underline", marginTop: 6, display: "inline-block" }}
+                                >
+                                  Ouvrir dans la carte
+                                </a>
+                              </div>
+                            ) : (
+                              item.data.text
+                            )}
                           </div>
-                          <span className="chat-msg-time">{formatTime(item.data.createdAt)}</span>
+                          <span className="chat-msg-time">
+                            {formatTime(item.data.createdAt)}
+                            {item.data.senderId === currentUserId ? ` • ${item.data.read ? "Vu" : "Envoyé"}` : ""}
+                          </span>
                         </div>
                       </div>
                     )
                   )}
 
                   {/* Typing indicator */}
-                  {typingFrom && typingFrom !== user.id && (
+                  {typingFrom && typingFrom !== currentUserId && (
                     <div className="chat-msg-wrap chat-msg-theirs">
                       <Avatar user={activePeer} size={28} />
                       <div className="chat-bubble-wrap">
@@ -427,6 +520,39 @@ export default function Chat() {
 
             {/* Input */}
             <div className="chat-input-area">
+              {showEmojiPicker && (
+                <div style={{ position: "absolute", bottom: 74, right: 94, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 12px 28px rgba(15,23,42,0.15)", padding: 10, display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, zIndex: 20 }}>
+                  {QUICK_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => appendEmoji(emoji)}
+                      style={{ border: "none", background: "transparent", fontSize: 20, cursor: "pointer", padding: 4 }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                className="chat-send-btn"
+                onClick={() => setShowEmojiPicker((prev) => !prev)}
+                style={{ marginRight: 8 }}
+                title="Emoji"
+              >
+                😊
+              </button>
+              <button
+                type="button"
+                className="chat-send-btn"
+                onClick={sendLocationMessage}
+                disabled={sendingLocation}
+                style={{ marginRight: 8 }}
+                title="Partager ma localisation"
+              >
+                📍
+              </button>
               <textarea
                 className="chat-input"
                 placeholder="Écrivez un message..."

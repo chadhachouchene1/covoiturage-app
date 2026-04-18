@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import tawsilaLogo from '../assets/tawsilalogo.png';
  import { TripContext } from "../context/TripContext";
+ import { io } from "socket.io-client";
 
 // Tawsila SVG Logo (inlined from the uploaded logo)
 const TawsilaLogo = ({ size = 38 }) => (
@@ -37,19 +38,121 @@ const NavBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
+  const [notifCount, setNotifCount] = useState(0);
+  const [tripNotifCount, setTripNotifCount] = useState(0);
+  const socketRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const previousUnreadCountRef = useRef(null);
   const { unreadCount, fetchUnreadCount } = useContext(TripContext);
+
+  const ensureAudioContext = async () => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new AudioContextClass();
+    }
+
+    if (audioCtxRef.current.state === "suspended") {
+      await audioCtxRef.current.resume();
+    }
+
+    return audioCtxRef.current;
+  };
+
+  const playNotifSound = async () => {
+    try {
+      const ctx = await ensureAudioContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.15, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+
+      const firstTone = ctx.createOscillator();
+      firstTone.type = "sine";
+      firstTone.frequency.setValueAtTime(880, now);
+      firstTone.connect(gain);
+      firstTone.start(now);
+      firstTone.stop(now + 0.1);
+
+      const secondTone = ctx.createOscillator();
+      secondTone.type = "sine";
+      secondTone.frequency.setValueAtTime(1174, now + 0.12);
+      secondTone.connect(gain);
+      secondTone.start(now + 0.12);
+      secondTone.stop(now + 0.22);
+    } catch {
+      // Ignore audio errors silently.
+    }
+  };
    
-   useEffect(() => {
-     fetchUnreadCount();
-     const interval = setInterval(fetchUnreadCount, 30000); // check toutes les 30s
-     return () => clearInterval(interval);
-   }, [user]);
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 120000); // fallback (temps réel géré par socket)
+    return () => clearInterval(interval);
+  }, [user]);
+
+  useEffect(() => {
+    const unlockAudio = async () => {
+      await ensureAudioContext();
+    };
+
+    window.addEventListener("click", unlockAudio, { once: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+
+    return () => {
+      window.removeEventListener("click", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+    };
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+  if (!user) return;
+
+  const socket = io("http://localhost:5000", {
+    transports: ["websocket"]
+  });
+
+  socketRef.current = socket;
+
+  socket.on("connect", () => {
+    const userId = user?.id || user?._id;
+    if (userId) {
+      socket.emit("user:join", userId);
+    }
+  });
+
+  // 🔔 Notification reçue
+  socket.on("notification:new", (data) => {
+    const notifType = data?.type;
+    if (notifType === "message") {
+      if (location.pathname !== "/chat") {
+        setNotifCount(prev => prev + 1);
+      }
+      playNotifSound();
+      return;
+    }
+
+    // Reservation / accepted / rejected / cancelled / payment
+    if (location.pathname !== "/my-reservations" && location.pathname !== "/reservations") {
+      setTripNotifCount(prev => prev + 1);
+    }
+    fetchUnreadCount();
+    playNotifSound();
+  });
+
+  return () => socket.disconnect();
+}, [user, fetchUnreadCount, location.pathname]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -62,6 +165,36 @@ const NavBar = () => {
   }, []);
 
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
+  useEffect(() => {
+  if (location.pathname === "/chat") {
+    setNotifCount(0);
+  }
+}, [location.pathname]);
+
+useEffect(() => {
+  if (location.pathname === "/my-reservations" || location.pathname === "/reservations") {
+    setTripNotifCount(0);
+    fetchUnreadCount();
+  }
+}, [location.pathname, fetchUnreadCount]);
+
+useEffect(() => {
+  if (!user) {
+    previousUnreadCountRef.current = null;
+    return;
+  }
+
+  if (previousUnreadCountRef.current === null) {
+    previousUnreadCountRef.current = unreadCount;
+    return;
+  }
+
+  if (unreadCount > previousUnreadCountRef.current) {
+    playNotifSound();
+  }
+
+  previousUnreadCountRef.current = unreadCount;
+}, [unreadCount, user]);
 
   const handleLogout = () => {
     logoutUser();
@@ -343,6 +476,11 @@ const NavBar = () => {
           to   { opacity: 1; transform: scale(1) translateY(0); }
         }
 
+        @keyframes pop {
+         from { transform: scale(0); }
+          to { transform: scale(1); }
+        }
+
         .taw-dd-header {
           padding: 10px 12px 12px;
           border-bottom: 1px solid rgba(13,31,78,0.07);
@@ -437,6 +575,18 @@ const NavBar = () => {
                   <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
                 </svg>
                 Chat
+                {notifCount > 0 && (
+                  <span style={{
+                    background: "#EF4444", color: "#fff",
+                    borderRadius: "50%", width: "18px", height: "18px",
+                    fontSize: "10px", fontWeight: 700,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    marginLeft: "4px",
+                    animation: "pop 0.3s"
+                  }}>
+                    {notifCount > 9 ? "9+" : notifCount}
+                  </span>
+                )}
               </Link>
               <Link to="/my-reservations" className={`taw-link${isActive('/my-reservations') ? ' active' : ''}`}>
      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -446,14 +596,14 @@ const NavBar = () => {
        <line x1="16" y1="17" x2="8" y2="17"/>
      </svg>
      Trajets
-     {unreadCount > 0 && (
+    {(unreadCount + tripNotifCount) > 0 && (
        <span style={{
          background: "#EF4444", color: "#fff",
          borderRadius: "50%", width: "18px", height: "18px",
          fontSize: "10px", fontWeight: 700,
          display: "flex", alignItems: "center", justifyContent: "center",
          marginLeft: "4px"
-       }}>{unreadCount}</span>
+      }}>{(unreadCount + tripNotifCount) > 9 ? "9+" : (unreadCount + tripNotifCount)}</span>
      )}
    </Link>
             </div>

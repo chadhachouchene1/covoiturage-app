@@ -84,7 +84,7 @@ const getMessages = async (req, res) => {
     // Marquer tous les messages non lus comme lus
     await Message.updateMany(
       { conversationId, senderId: { $ne: req.userId }, read: false },
-      { read: true }
+      { $set: { read: true, readAt: new Date() } }
     );
 
     res.status(200).json(messages);
@@ -98,9 +98,14 @@ const getMessages = async (req, res) => {
 // POST /api/chat/messages
 const sendMessage = async (req, res) => {
   try {
-    const { conversationId, text } = req.body;
-    if (!conversationId || !text?.trim()) {
-      return res.status(400).json({ message: "conversationId et text requis" });
+    const { conversationId, text, messageType = "text", location } = req.body;
+    const trimmedText = text?.trim() || "";
+    const isLocation = messageType === "location";
+    if (isLocation && (typeof location?.lat !== "number" || typeof location?.lng !== "number")) {
+      return res.status(400).json({ message: "Coordonnées localisation invalides" });
+    }
+    if (!conversationId || (!trimmedText && !isLocation)) {
+      return res.status(400).json({ message: "conversationId et contenu requis" });
     }
 
     const conv = await Conversation.findById(conversationId);
@@ -112,7 +117,9 @@ const sendMessage = async (req, res) => {
     const message = await Message.create({
       conversationId,
       senderId: req.userId,
-      text: text.trim(),
+      text: isLocation ? (trimmedText || "📍 Localisation partagée") : trimmedText,
+      messageType,
+      location: isLocation ? location : undefined,
     });
 
     // Mettre à jour updatedAt de la conversation pour le tri

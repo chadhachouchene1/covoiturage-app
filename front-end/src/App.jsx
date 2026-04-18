@@ -11,6 +11,7 @@ import TripDetail      from "./pages/TripDetail.jsx";
 import UserSearch      from "./pages/UserSearch.jsx";
 import PaymentSuccess  from "./pages/PaymentSuccess.jsx";
 import Landing  from "./pages/Landing.jsx";
+import Settings       from "./pages/Settings.jsx";
 
 import NavBar          from "./components/NavBar.jsx";
 import { useContext }  from "react";
@@ -39,6 +40,7 @@ function App() {
           <Route path="/my-reservations"        element={user ? <MyReservations /> : <Navigate to="/login" />} />
           <Route path="/payment-success/:id"    element={user ? <PaymentSuccess /> : <Navigate to="/login" />} />
           <Route path="/chat"                   element={user ? <Chat /> : <Navigate to="/login" />} />
+          <Route path="/settings"               element={user ? <Settings /> : <Navigate to="/login" />} />
           <Route path="/*"                      element={<Navigate to="/" />} />
         </Routes>
       </div>

@@ -24,7 +24,8 @@ io.on("connection", (socket) => {
   console.log("🟢 Socket connected:", socket.id);
 
   socket.on("user:join", (userId) => {
-    onlineUsers.set(userId, socket.id);
+    if (!userId) return;
+    onlineUsers.set(String(userId), socket.id);
     io.emit("users:online", Array.from(onlineUsers.keys()));
   });
 
@@ -32,16 +33,29 @@ io.on("connection", (socket) => {
     try {
       const Message      = require("./Models/Messagemodel");
       const Conversation = require("./Models/Conversationmodel");
+      const messageType = data.messageType === "location" ? "location" : "text";
+      const text = (data.text || "").trim();
+      const isLocation = messageType === "location";
+      if (!text && !isLocation) {
+        socket.emit("message:error", { message: "Message vide" });
+        return;
+      }
+      if (isLocation && (typeof data?.location?.lat !== "number" || typeof data?.location?.lng !== "number")) {
+        socket.emit("message:error", { message: "Localisation invalide" });
+        return;
+      }
 
       const message = await Message.create({
         conversationId: data.conversationId,
         senderId:       data.senderId,
-        text:           data.text.trim(),
+        text:           isLocation ? (text || "📍 Localisation partagée") : text,
+        messageType,
+        location:       isLocation ? data.location : undefined,
       });
 
       await Conversation.findByIdAndUpdate(data.conversationId, { updatedAt: new Date() });
 
-      const receiverSocketId = onlineUsers.get(data.receiverId);
+      const receiverSocketId = onlineUsers.get(String(data.receiverId));
       if (receiverSocketId) {
         io.to(receiverSocketId).emit("message:receive", message);
         // ⭐ Notify receiver for navbar badge
@@ -55,13 +69,30 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("messages:read", async ({ conversationId, readerId, senderId }) => {
+    try {
+      if (!conversationId || !readerId) return;
+      await require("./Models/Messagemodel").updateMany(
+        { conversationId, senderId: { $ne: readerId }, read: false },
+        { $set: { read: true, readAt: new Date() } }
+      );
+
+      const targetSocketId = onlineUsers.get(String(senderId));
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("messages:read", { conversationId, readerId, readAt: new Date().toISOString() });
+      }
+    } catch (err) {
+      console.error("Socket messages:read error:", err);
+    }
+  });
+
   socket.on("typing:start", ({ conversationId, senderId, receiverId }) => {
-    const receiverSocketId = onlineUsers.get(receiverId);
+    const receiverSocketId = onlineUsers.get(String(receiverId));
     if (receiverSocketId) io.to(receiverSocketId).emit("typing:start", { conversationId, senderId });
   });
 
   socket.on("typing:stop", ({ conversationId, senderId, receiverId }) => {
-    const receiverSocketId = onlineUsers.get(receiverId);
+    const receiverSocketId = onlineUsers.get(String(receiverId));
     if (receiverSocketId) io.to(receiverSocketId).emit("typing:stop", { conversationId, senderId });
   });
 

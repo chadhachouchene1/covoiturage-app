@@ -1,6 +1,21 @@
 const express = require("express");
 const router = express.Router();
-const { registerUser, loginUser, findUser, getUsers, upload, sendOTP, checkOTP, forgotPassword, resetPassword } = require("../Controllers/userController");
+const { protect } = require("../Controllers/Tripcontroller");
+const {
+  registerUser,
+  loginUser,
+  findUser,
+  getUsers,
+  upload,
+  sendOTP,
+  checkOTP,
+  forgotPassword,
+  resetPassword,
+  updateMyProfile,
+  sendEmailUpdateOTP,
+  verifyEmailUpdateOTP,
+  changeMyPassword,
+} = require("../Controllers/userController");
 
 router.post("/send-otp", sendOTP);
 router.post("/verify-otp", checkOTP);
@@ -10,6 +25,10 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/find/:userId", findUser);
 router.get("/getusers", getUsers);
+router.patch("/me/profile", protect, upload.single("image"), updateMyProfile);
+router.post("/me/email/send-otp", protect, sendEmailUpdateOTP);
+router.patch("/me/email/verify", protect, verifyEmailUpdateOTP);
+router.patch("/me/password", protect, changeMyPassword);
 router.get("/search", async (req, res) => {
   try {
     const { q } = req.query;

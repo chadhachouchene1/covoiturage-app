@@ -209,4 +209,138 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser, findUser, getUsers, upload, sendOTP, checkOTP, forgotPassword, resetPassword };
+const toAuthUser = (user) => ({
+  id: user._id,
+  name: `${user.firstName} ${user.lastName}`.trim(),
+  email: user.email,
+  phone: user.phone,
+  image: user.image,
+  role: user.role,
+});
+
+const updateMyProfile = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
+
+    const { firstName, lastName, phone, birthPlace, dateOfBirth } = req.body;
+
+    if (firstName) user.firstName = firstName.trim();
+    if (lastName) user.lastName = lastName.trim();
+    if (birthPlace) user.birthPlace = birthPlace.trim();
+    if (dateOfBirth) user.dateOfBirth = dateOfBirth;
+
+    if (phone) {
+      if (!validator.isMobilePhone(phone, "any")) {
+        return res.status(400).json({ message: "Numéro de téléphone invalide" });
+      }
+      const phoneExists = await userModel.findOne({ phone, _id: { $ne: req.userId } });
+      if (phoneExists) return res.status(409).json({ message: "Ce numéro est déjà utilisé" });
+      user.phone = phone;
+    }
+
+    if (req.file) {
+      user.image = `/uploads/${req.file.filename}`;
+    }
+
+    await user.save();
+    res.status(200).json({ message: "Profil mis à jour ✅", user: toAuthUser(user) });
+  } catch (error) {
+    console.error("UpdateMyProfile Error:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+
+const sendEmailUpdateOTP = async (req, res) => {
+  try {
+    const { newEmail } = req.body;
+    if (!newEmail || !validator.isEmail(newEmail)) {
+      return res.status(400).json({ message: "Nouvel email invalide" });
+    }
+
+    const user = await userModel.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
+    if (newEmail.toLowerCase() === user.email.toLowerCase()) {
+      return res.status(400).json({ message: "C'est déjà votre email actuel" });
+    }
+
+    const existing = await userModel.findOne({ email: newEmail.toLowerCase() });
+    if (existing) return res.status(409).json({ message: "Cet email est déjà utilisé" });
+
+    await sendOTPEmail(newEmail.toLowerCase(), user.firstName || "Utilisateur");
+    res.status(200).json({ message: "Code OTP envoyé sur le nouvel email ✅" });
+  } catch (error) {
+    console.error("SendEmailUpdateOTP Error:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+
+const verifyEmailUpdateOTP = async (req, res) => {
+  try {
+    const { newEmail, code } = req.body;
+    if (!newEmail || !code) {
+      return res.status(400).json({ message: "Nouvel email et code requis" });
+    }
+    if (!validator.isEmail(newEmail)) {
+      return res.status(400).json({ message: "Nouvel email invalide" });
+    }
+
+    const result = verifyOTP(newEmail.toLowerCase(), code);
+    if (!result.valid) return res.status(400).json({ message: result.message });
+
+    const user = await userModel.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
+
+    const existing = await userModel.findOne({ email: newEmail.toLowerCase(), _id: { $ne: req.userId } });
+    if (existing) return res.status(409).json({ message: "Cet email est déjà utilisé" });
+
+    user.email = newEmail.toLowerCase();
+    await user.save();
+
+    res.status(200).json({ message: "Email modifié avec succès ✅", user: toAuthUser(user) });
+  } catch (error) {
+    console.error("VerifyEmailUpdateOTP Error:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+
+const changeMyPassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Mot de passe actuel et nouveau requis" });
+    }
+    if (!validator.isStrongPassword(newPassword, { minLength: 6 })) {
+      return res.status(400).json({ message: "Nouveau mot de passe trop faible" });
+    }
+
+    const user = await userModel.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Mot de passe actuel incorrect" });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    res.status(200).json({ message: "Mot de passe modifié ✅" });
+  } catch (error) {
+    console.error("ChangeMyPassword Error:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  findUser,
+  getUsers,
+  upload,
+  sendOTP,
+  checkOTP,
+  forgotPassword,
+  resetPassword,
+  updateMyProfile,
+  sendEmailUpdateOTP,
+  verifyEmailUpdateOTP,
+  changeMyPassword,
+};

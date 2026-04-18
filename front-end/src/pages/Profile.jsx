@@ -173,16 +173,12 @@ export default function Profile() {
       const token    = localStorage.getItem("Token");
       const targetId = userId || currentUser?.id;
       try {
-        if (isOwnProfile) {
-          setProfile(currentUser);
-        } else {
-          const res = await fetch(`${baseUrl}/users/find/${targetId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (!res.ok) { navigate("/"); return; }
-          setProfile(await res.json());
-        }
-        const tRes  = await fetch(`${baseUrl}/trips?driver=${targetId}`);
+        const res = await fetch(`${baseUrl}/users/find/${targetId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) { navigate("/"); return; }
+        setProfile(await res.json());
+        const tRes  = await fetch(`${baseUrl}/trips?driver=${targetId}&includeAllStatuses=true`);
         const tData = await tRes.json();
         setTrips(Array.isArray(tData) ? tData : []);
       } catch { navigate("/"); }
@@ -263,7 +259,10 @@ export default function Profile() {
         <aside className="profile-sidebar">
           <div className="sidebar-card">
             <h3 className="sidebar-title">À propos</h3>
-            <div className="sidebar-item"><span>👤</span><span>{fullName}</span></div>
+            <div className="sidebar-item"><span>👤</span><span>{fullName || "Non renseigné"}</span></div>
+            <div className="sidebar-item"><span>📧</span><span>{profile.email}</span></div>
+             <div className="sidebar-item"><span>🎂</span><span>{profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString("fr-FR") : "Non renseigné"}</span></div>
+                <div className="sidebar-item"><span>📍</span><span>{profile.birthPlace || "Non renseigné"}</span></div>
             {isOwnProfile && (
               <>
                 <div className="sidebar-item"><span>📧</span><span>{profile.email}</span></div>

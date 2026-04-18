@@ -62,6 +62,13 @@ const getDriverReservations = async (req, res) => {
   try {
     const myTrips = await tripModel.find({ driver: req.userId }).select("_id");
     const tripIds = myTrips.map(t => t._id);
+
+    // When the driver opens "Demandes reçues", pending requests are considered seen.
+    await reservationModel.updateMany(
+      { trip: { $in: tripIds }, status: "pending", driverRead: false },
+      { $set: { driverRead: true } }
+    );
+
     const reservations = await reservationModel
       .find({ trip: { $in: tripIds } })
       .populate("passenger", "firstName lastName image phone email")
