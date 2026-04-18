@@ -10,6 +10,8 @@ import Profile         from "./pages/Profile.jsx";
 import TripDetail      from "./pages/TripDetail.jsx";
 import UserSearch      from "./pages/UserSearch.jsx";
 import PaymentSuccess  from "./pages/PaymentSuccess.jsx";
+import Landing  from "./pages/Landing.jsx";
+
 import NavBar          from "./components/NavBar.jsx";
 import { useContext }  from "react";
 import { AuthContext } from "./context/AuthContext.jsx";
@@ -23,7 +25,7 @@ function App() {
       <div style={{ height: "calc(100vh - 64px)", overflowY: "auto", overflowX: "hidden" }}>
         <Routes>
           {/* Public */}
-          <Route path="/"                       element={<Home />} />
+          <Route path="/" element={user ? <Home /> : <Landing />} />
           <Route path="/login"                  element={user ? <Navigate to="/" /> : <Login />} />
           <Route path="/register"               element={user ? <Navigate to="/" /> : <Register />} />
           <Route path="/forgot-password"        element={<ForgotPassword />} />
