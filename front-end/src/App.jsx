@@ -13,6 +13,8 @@ import PaymentSuccess  from "./pages/PaymentSuccess.jsx";
 import Landing  from "./pages/Landing.jsx";
 import Settings       from "./pages/Settings.jsx";
 
+import Support         from "./pages/Support.jsx"; 
+
 import NavBar          from "./components/NavBar.jsx";
 import { useContext }  from "react";
 import { AuthContext } from "./context/AuthContext.jsx";
@@ -33,6 +35,7 @@ function App() {
           <Route path="/trips/:id"              element={<TripDetail />} />
           <Route path="/profile/:userId"        element={<Profile />} />
           <Route path="/search-users"           element={<UserSearch />} />
+          <Route path="/support"               element={<Support />} />
 
           {/* Protected */}
           <Route path="/profile"                element={user ? <Profile /> : <Navigate to="/login" />} />

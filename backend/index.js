@@ -5,6 +5,8 @@ const path       = require("path");
 const http       = require("http");
 const { Server } = require("socket.io");
 require("dotenv").config();
+const supportRoute = require("./Routes/supportRoute");
+
 
 const app    = express();
 const server = http.createServer(app);
@@ -122,6 +124,7 @@ const tripRoute        = require("./Routes/Triproute");
 const reservationRoute = require("./Routes/Reservationroute");
 const chatRoute        = require("./Routes/Chatroute");
 const ratingRoute      = require("./Routes/Ratingroute");
+app.use("/api/support", supportRoute);
 
 app.use("/api/users",        userRoute);
 app.use("/api/trips",        tripRoute);
