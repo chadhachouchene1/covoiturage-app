@@ -7,3 +7,4 @@ export default defineConfig({
     outDir: "dist"
   }
 })
+// dist ajouter avec success 
