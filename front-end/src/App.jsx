@@ -18,7 +18,7 @@ import Support         from "./pages/Support.jsx";
 import NavBar          from "./components/NavBar.jsx";
 import { useContext }  from "react";
 import { AuthContext } from "./context/AuthContext.jsx";
-
+//en vas faire le dep
 function App() {
   const { user } = useContext(AuthContext);
 
