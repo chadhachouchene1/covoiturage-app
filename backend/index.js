@@ -142,7 +142,7 @@ mongoose.connect(process.env.MONGO_URI)
       console.log(`Server running on port: ${port} 🚀`);
 
       // ── CRON: Mark expired trips as "completed" every 10 minutes ──────
-      const tripModel = require("./Models/tripModel");
+      const tripModel = require("./Models/Tripmodel");
       setInterval(async () => {
         try {
           const now = new Date();
