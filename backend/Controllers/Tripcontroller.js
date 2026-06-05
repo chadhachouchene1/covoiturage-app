@@ -1,10 +1,10 @@
-const tripModel        = require("../Models/tripModel");
-const reservationModel = require("../Models/reservationModel");
+const tripModel        = require("../Models/Tripmodel");
+const reservationModel = require("../Models/Reservationmodel");
 const userModel        = require("../Models/userModel");
 const multer           = require("multer");
 const path             = require("path");
 const fs               = require("fs");
-const { sendTripEmail } = require("../emailService");
+const { sendTripEmail } = require("../Emailservice");
 
 const uploadDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
