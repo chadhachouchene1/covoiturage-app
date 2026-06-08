@@ -5,7 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 import { baseUrl } from "../utils/services";
 import "./Home.css";
 
-const baseImgUrl = "http://localhost:5000";
+const baseImgUrl = import.meta.env.VITE_IMG_URL;
 
 // ── User Search Bar ──────────────────────────────────────────────────────────
 const UserSearchBar = () => {

@@ -165,7 +165,7 @@ export default function MyReservations() {
                     <div className="res-card-left">
                       {passenger?.image ? (
                         <img
-                          src={`http://localhost:5000${passenger.image}`}
+                          src={`${import.meta.env.VITE_IMG_URL}${passenger.image}`}
                           alt="passenger"
                           className="res-car-img res-passenger-img"
                         />

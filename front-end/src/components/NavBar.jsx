@@ -119,7 +119,7 @@ const NavBar = () => {
   useEffect(() => {
   if (!user) return;
 
-  const socket = io("http://localhost:5000", {
+  const socket = io(import.meta.env.VITE_SOCKET_URL, {
     transports: ["websocket"]
   });
 
@@ -201,7 +201,7 @@ useEffect(() => {
     navigate('/login');
   };
 
-  const avatarSrc = user?.image ? `http://localhost:5000${user.image}` : null;
+  const avatarSrc = user?.image ? `${import.meta.env.VITE_IMG_URL}${user.image}` : null;
   const initials = user
     ? `${user.name?.split(' ')[0]?.[0] || ''}${user.name?.split(' ')[1]?.[0] || ''}`.toUpperCase()
     : '';

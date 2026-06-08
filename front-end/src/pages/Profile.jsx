@@ -5,7 +5,7 @@ import { TripContext } from "../context/TripContext";
 import { baseUrl } from "../utils/services";
 import "./Profile.css";
 
-const baseImgUrl = "http://localhost:5000";
+const baseImgUrl = import.meta.env.VITE_IMG_URL;
 const statusConfig = {
   active:    { label: "Actif",   color: "#16A34A", bg: "#DCFCE7" },
   cancelled: { label: "Annulé",  color: "#DC2626", bg: "#FEE2E2" },

@@ -5,7 +5,7 @@ import { TripContext } from "../context/TripContext";
 import { baseUrl } from "../utils/services";
 import "./TripDetail.css";
 
-const baseImgUrl = "http://localhost:5000";
+const baseImgUrl = import.meta.env.VITE_IMG_URL;
 
 export default function TripDetail() {
   const { id } = useParams();
