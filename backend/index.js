@@ -14,7 +14,7 @@ const server = http.createServer(app);
 // ── Socket.IO ──────────────────────────────────────────────────────────────
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_URL,
     methods: ["GET", "POST"],
   },
 });
@@ -116,7 +116,7 @@ global._onlineUsers = onlineUsers;
 // ── Middleware ─────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(cors());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 // ── Routes ────────────────────────────────────────────────────────────────
 const userRoute        = require("./Routes/userRoute");

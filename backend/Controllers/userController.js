@@ -2,18 +2,22 @@ const userModel = require("../Models/userModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const validator = require("validator");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+
 const { sendOTPEmail, verifyOTP } = require("../Otpservice");
 
 // ─── Multer (image upload) ────────────────────────────────────────────────────
-const uploadDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const multer    = require("multer");
+const multerS3  = require("multer-s3");
+const { S3Client } = require("@aws-sdk/client-s3");
+const path      = require("path");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename:    (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId:     process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    sessionToken:    process.env.AWS_SESSION_TOKEN,
+  },
 });
 
 const fileFilter = (req, file, cb) => {
@@ -22,6 +26,13 @@ const fileFilter = (req, file, cb) => {
   const mime = allowed.test(file.mimetype);
   cb(ext && mime ? null : new Error("Only images are allowed"), ext && mime);
 };
+
+const storage = multerS3({
+  s3,
+  bucket: process.env.AWS_BUCKET_NAME,
+  metadata: (req, file, cb) => cb(null, { fieldName: file.fieldname }),
+  key: (req, file, cb) => cb(null, `users/${Date.now()}-${file.originalname.replace(/\s/g, "_")}`),
+});
 
 const upload = multer({ storage, fileFilter, limits: { fileSize: 3 * 1024 * 1024 } });
 
@@ -83,7 +94,7 @@ const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const imagePath = req.file ? `/uploads/${req.file.filename}` : "";
+    const imagePath = req.file ? req.file.location : "";
 
     const newUser = await userModel.create({
       firstName, lastName, dateOfBirth, birthPlace,
@@ -240,7 +251,7 @@ const updateMyProfile = async (req, res) => {
     }
 
     if (req.file) {
-      user.image = `/uploads/${req.file.filename}`;
+      user.image = req.file.location;
     }
 
     await user.save();

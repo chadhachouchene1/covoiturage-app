@@ -95,8 +95,8 @@ const createStripeSession = async (req, res) => {
         product_data: { name: `Trajet ${reservation.trip.departure} → ${reservation.trip.destination}`,
           description: `${reservation.seatsRequested} place(s) · ${reservation.trip.date?.toString().slice(0,10)}` },
         unit_amount: total * 100 }, quantity: 1 }],
-      success_url: `${process.env.FRONTEND_URL || "http://localhost:5173"}/payment-success/${reservation._id}`,
-      cancel_url:  `${process.env.FRONTEND_URL || "http://localhost:5173"}/my-reservations`,
+      success_url: `${process.env.FRONTEND_URL || process.env.CLIENT_URL}/payment-success/${reservation._id}`,
+      cancel_url:  `${process.env.FRONTEND_URL || process.env.CLIENT_URL}/my-reservations`,
     });
     res.json({ url: session.url });
   } catch (error) {

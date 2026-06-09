@@ -1,5 +1,3 @@
-
-
 services:
   backend:
     image: chouchenechadha/covoiturage-backend:latest
@@ -8,9 +6,21 @@ services:
     ports:
       - "5000:5000"
     env_file:
-      - ./backend/.env
-    volumes:
-      - uploads_data:/app/uploads
+      - .env
+    networks:
+      - covoiturage-network
 
-volumes:
-  uploads_data:
+  frontend:
+    image: chouchenechadha/covoiturage-frontend:latest
+    container_name: covoiturage-frontend
+    restart: always
+    ports:
+      - "3002:80"
+    depends_on:
+      - backend
+    networks:
+      - covoiturage-network
+
+networks:
+  covoiturage-network:
+    driver: bridge

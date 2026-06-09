@@ -1,18 +1,21 @@
 const tripModel        = require("../Models/Tripmodel");
 const reservationModel = require("../Models/Reservationmodel");
 const userModel        = require("../Models/userModel");
-const multer           = require("multer");
-const path             = require("path");
-const fs               = require("fs");
+
 const { sendTripEmail } = require("../Emailservice");
 
-const uploadDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const multer           = require("multer");
+const multerS3         = require("multer-s3");
+const { S3Client }     = require("@aws-sdk/client-s3");
+const path             = require("path");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename:    (req, file, cb) =>
-    cb(null, `${Date.now()}-${file.originalname.replace(/\s/g, "_")}`),
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId:     process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    sessionToken:    process.env.AWS_SESSION_TOKEN,
+  },
 });
 
 const fileFilter = (req, file, cb) => {
@@ -22,8 +25,14 @@ const fileFilter = (req, file, cb) => {
   cb(ok ? null : new Error("Images only"), ok);
 };
 
-const uploadCar = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+const storage = multerS3({
+  s3,
+  bucket: process.env.AWS_BUCKET_NAME,
+  metadata: (req, file, cb) => cb(null, { fieldName: file.fieldname }),
+  key: (req, file, cb) => cb(null, `trips/${Date.now()}-${file.originalname.replace(/\s/g, "_")}`),
+});
 
+const uploadCar = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
 const jwt = require("jsonwebtoken");
 
 const protect = (req, res, next) => {
@@ -46,7 +55,7 @@ const createTrip = async (req, res) => {
     if (new Date(date) < new Date())
       return res.status(400).json({ message: "La date du trajet ne peut pas être dans le passé" });
 
-    const carImage = req.file ? `/uploads/${req.file.filename}` : "";
+    const carImage = req.file ? req.file.location : "";
     const trip = await tripModel.create({
       driver: req.userId, departure: departure.trim(), destination: destination.trim(),
       date, time, carImage, licensePlate, price: Number(price), seats: Number(seats),
