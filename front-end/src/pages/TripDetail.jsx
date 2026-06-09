@@ -5,7 +5,7 @@ import { TripContext } from "../context/TripContext";
 import { baseUrl } from "../utils/services";
 import "./TripDetail.css";
 
-const baseImgUrl = import.meta.env.VITE_IMG_URL;
+
 
 export default function TripDetail() {
   const { id } = useParams();
@@ -55,7 +55,7 @@ export default function TripDetail() {
   if (!trip) return null;
 
   const isDriver   = user?.id === trip.driver?._id;
-  const driverImg  = trip.driver?.image ? `${baseImgUrl}${trip.driver.image}` : null;
+  const driverImg = trip.driver?.image || null;
   const driverInit = `${trip.driver?.firstName?.[0] || ""}${trip.driver?.lastName?.[0] || ""}`.toUpperCase();
   const formattedDate = new Date(trip.date).toLocaleDateString("fr-FR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -68,7 +68,7 @@ export default function TripDetail() {
       {/* ── Hero ──────────────────────────────────────────────────── */}
       <div className="td-hero">
         {trip.carImage
-          ? <img src={`${baseImgUrl}${trip.carImage}`} alt="voiture" className="td-hero-img" />
+          ? <img src={trip.carImage} alt="voiture" className="td-hero-img" />
           : <div className="td-hero-placeholder">🚗</div>}
         <div className="td-hero-overlay" />
         <div className="td-hero-content">

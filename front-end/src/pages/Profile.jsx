@@ -5,7 +5,7 @@ import { TripContext } from "../context/TripContext";
 import { baseUrl } from "../utils/services";
 import "./Profile.css";
 
-const baseImgUrl = import.meta.env.VITE_IMG_URL;
+
 const statusConfig = {
   active:    { label: "Actif",   color: "#16A34A", bg: "#DCFCE7" },
   cancelled: { label: "Annulé",  color: "#DC2626", bg: "#FEE2E2" },
@@ -130,7 +130,7 @@ const RatingsSection = ({ targetUserId, currentUserId, isOwnProfile }) => {
               <div className="rating-item-header">
                 <div className="rating-item-avatar">
                   {r.reviewer?.image
-                    ? <img src={`${baseImgUrl}${r.reviewer.image}`} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} />
+                    ?<img src={r.reviewer.image} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} />
                     : <div className="rating-item-init">{r.reviewer?.firstName?.[0]}{r.reviewer?.lastName?.[0]}</div>}
                 </div>
                 <div style={{ flex: 1 }}>
@@ -211,7 +211,7 @@ export default function Profile() {
   if (loading) return <div className="profile-loading"><div className="profile-loading-spinner" /><p>Chargement...</p></div>;
   if (!profile) return <div className="profile-loading"><p>Profil introuvable</p></div>;
 
-  const avatarSrc      = profile.image ? `${baseImgUrl}${profile.image}` : null;
+  const avatarSrc = profile.image || null;
   const initials       = `${profile.firstName?.[0] || ""}${profile.lastName?.[0] || ""}`.toUpperCase();
   const fullName       = `${profile.firstName || ""} ${profile.lastName || ""}`.trim();
   const activeTrips    = trips.filter(t => t.status === "active").length;
@@ -314,7 +314,7 @@ export default function Profile() {
               <div className="profile-trips-list">
                 {trips.map(trip => (
                   <div key={trip._id} className="profile-trip-card">
-                    {trip.carImage ? <img src={`${baseImgUrl}${trip.carImage}`} alt="car" className="ptc-car-img" />
+                    {trip.carImage ? <img src={trip.carImage} alt="car" className="ptc-car-img" />
                       : <div className="ptc-car-placeholder">🚗</div>}
                     <div className="ptc-body">
                       <div className="ptc-route">

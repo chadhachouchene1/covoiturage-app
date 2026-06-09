@@ -5,7 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 import { baseUrl } from "../utils/services";
 import "./Home.css";
 
-const baseImgUrl = import.meta.env.VITE_IMG_URL;
+
 
 // ── User Search Bar ──────────────────────────────────────────────────────────
 const UserSearchBar = () => {
@@ -46,7 +46,7 @@ const UserSearchBar = () => {
       {open && results.length > 0 && (
         <div className="user-search-dropdown">
           {results.map((u) => {
-            const avatarSrc = u.image ? `${baseImgUrl}${u.image}` : null;
+            const avatarSrc = user.image || null;
             const initials  = `${u.firstName?.[0] || ""}${u.lastName?.[0] || ""}`.toUpperCase();
             return (
               <Link
@@ -84,8 +84,8 @@ const UserSearchBar = () => {
 const TripCard = ({ trip, onReserve, onCardClick }) => {
   const { user } = useContext(AuthContext);
   const isDriver    = user?.id === trip.driver?._id;
-  const driverAvatar = trip.driver?.image ? `${baseImgUrl}${trip.driver.image}` : null;
-  const carImg       = trip.carImage ? `${baseImgUrl}${trip.carImage}` : null;
+  const driverAvatar = trip.driver?.image || null;
+  const carImg = trip.carImage || null;
   const formattedDate = new Date(trip.date).toLocaleDateString("fr-FR", {
     weekday: "short", day: "numeric", month: "short",
   });

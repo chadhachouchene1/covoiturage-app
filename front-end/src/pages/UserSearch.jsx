@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { baseUrl } from "../utils/services";
 import "./UserSearch.css";
 
-const baseImgUrl = import.meta.env.VITE_IMG_URL;
+
 
 export default function UserSearch() {
   const [query, setQuery]   = useState("");
@@ -68,7 +68,7 @@ export default function UserSearch() {
             <p className="usearch-count">{results.length} résultat{results.length > 1 ? "s" : ""}</p>
             <div className="usearch-grid">
               {results.map((u) => {
-                const avatarSrc = u.image ? `${baseImgUrl}${u.image}` : null;
+                const avatarSrc = u.image || null;
                 const initials  = `${u.firstName?.[0] || ""}${u.lastName?.[0] || ""}`.toUpperCase();
                 return (
                   <Link key={u._id} to={`/profile/${u._id}`} className="usearch-card">
