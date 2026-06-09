@@ -201,7 +201,7 @@ useEffect(() => {
     navigate('/login');
   };
 
-  const avatarSrc = user?.image ? `${import.meta.env.VITE_IMG_URL}${user.image}` : null;
+  const avatarSrc = user?.image || null;
   const initials = user
     ? `${user.name?.split(' ')[0]?.[0] || ''}${user.name?.split(' ')[1]?.[0] || ''}`.toUpperCase()
     : '';

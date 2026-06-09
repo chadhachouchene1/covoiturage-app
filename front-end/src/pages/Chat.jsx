@@ -6,13 +6,13 @@ import "leaflet/dist/leaflet.css";
 import { AuthContext } from "../context/AuthContext";
 import "./Chat.css";
 
-const BASE_URL     = import.meta.env.VITE_IMG_URL;
-const SOCKET_URL   = import.meta.env.VITE_SOCKET_URL;
+const BASE_URL   = import.meta.env.VITE_API_URL;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
 const QUICK_EMOJIS = ["😀", "😂", "😍", "👍", "🙏", "🔥", "🎉", "💯", "🤝", "❤️", "😎", "😢"];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const getToken  = () => localStorage.getItem("Token");
-const avatarUrl = (img) => img ? `${BASE_URL}${img}` : null;
+const avatarUrl = (img) => img ? img : null;
 
 const Avatar = ({ user, size = 40, online = false }) => {
   const initials = `${user?.firstName?.[0] || ""}${user?.lastName?.[0] || ""}`.toUpperCase();
@@ -87,10 +87,8 @@ export default function Chat() {
     socket.on("users:online", (ids) => setOnlineUsers(ids));
 
     socket.on("message:receive", (msg) => {
-      // Ajouter le message si on est dans cette conversation
       setMessages((prev) => {
         if (activeConvRef.current?._id === msg.conversationId) {
-          // éviter les doublons
           if (prev.some(m => m._id === msg._id)) return prev;
           notifyMessagesRead(msg.conversationId, msg.senderId);
           return [...prev, msg];
@@ -98,7 +96,6 @@ export default function Chat() {
         return prev;
       });
 
-      // Mettre à jour le dernier message dans la sidebar
       setConversations((prev) =>
         prev.map((c) =>
           c._id === msg.conversationId
@@ -147,7 +144,6 @@ export default function Chat() {
     return () => socket.disconnect();
   }, [user, currentUserId, notifyMessagesRead]);
 
-  // Ref vers activeConv pour les closures socket
   const activeConvRef = useRef(activeConv);
   useEffect(() => { activeConvRef.current = activeConv; }, [activeConv]);
 
@@ -155,7 +151,7 @@ export default function Chat() {
   const loadConversations = useCallback(async () => {
     setLoadingConvs(true);
     try {
-      const res  = await fetch(`${BASE_URL}/api/chat/conversations`, {
+      const res = await fetch(`${BASE_URL}/chat/conversations`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();
@@ -166,7 +162,7 @@ export default function Chat() {
 
   useEffect(() => { loadConversations(); }, []);
 
-  // ── Ouvrir une conversation depuis ?with=userId (venant du profil) ───
+  // ── Ouvrir une conversation depuis ?with=userId ───
   useEffect(() => {
     const withUser = searchParams.get("with");
     if (withUser && user) {
@@ -177,7 +173,7 @@ export default function Chat() {
   // ── Ouvrir / créer une conversation ──────────────────────────────────
   const openOrCreateConv = async (receiverId) => {
     try {
-      const res  = await fetch(`${BASE_URL}/api/chat/conversations`, {
+      const res = await fetch(`${BASE_URL}/chat/conversations`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ receiverId }),
@@ -200,12 +196,11 @@ export default function Chat() {
     setLoadingMsgs(true);
     setMessages([]);
     try {
-      const res  = await fetch(`${BASE_URL}/api/chat/messages/${convId}`, {
+      const res = await fetch(`${BASE_URL}/chat/messages/${convId}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();
       setMessages(Array.isArray(data) ? data : []);
-      // Reset badge non lus
       setConversations(prev => prev.map(c => c._id === convId ? { ...c, unreadCount: 0 } : c));
       const conv = conversations.find((c) => c._id === convId);
       const peer = conv?.members?.find((m) => m._id !== currentUserId);
@@ -214,7 +209,6 @@ export default function Chat() {
     setLoadingMsgs(false);
   };
 
-  // Scroll au bas
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typingFrom]);
@@ -233,7 +227,6 @@ export default function Chat() {
     });
     setText("");
     setShowEmojiPicker(false);
-    // Arrêter le typing
     socketRef.current.emit("typing:stop", {
       conversationId: activeConv._id,
       senderId: currentUserId,
@@ -304,7 +297,7 @@ export default function Chat() {
     const timer = setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const res  = await fetch(`${BASE_URL}/api/users/search?q=${encodeURIComponent(searchQ)}`, {
+        const res = await fetch(`${BASE_URL}/users/search?q=${encodeURIComponent(searchQ)}`, {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
         const data = await res.json();
@@ -315,14 +308,12 @@ export default function Chat() {
     return () => clearTimeout(timer);
   }, [searchQ]);
 
-  // ── Interlocuteur de la conv active ──────────────────────────────────
   const getOtherMember = (conv) =>
     conv?.members?.find(m => m._id !== currentUserId);
 
   const activePeer = activeConv ? getOtherMember(activeConv) : null;
   const isPeerOnline = activePeer ? onlineUsers.includes(activePeer._id) : false;
 
-  // Grouper les messages par date
   const groupedMessages = (() => {
     const groups = [];
     let lastDate = null;
@@ -343,7 +334,6 @@ export default function Chat() {
           <h2 className="chat-sidebar-title">Messages</h2>
         </div>
 
-        {/* Recherche */}
         <div className="chat-search-wrap">
           <div className="chat-search-box">
             <span className="chat-search-icon">🔍</span>
@@ -357,7 +347,6 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* Résultats recherche */}
         {searchResults.length > 0 && (
           <div className="chat-search-results">
             <div className="chat-search-results-label">Nouvelle conversation</div>
@@ -370,7 +359,6 @@ export default function Chat() {
           </div>
         )}
 
-        {/* Liste conversations */}
         <div className="chat-conv-list">
           {loadingConvs ? (
             <div className="chat-conv-loading">Chargement...</div>
@@ -425,7 +413,6 @@ export default function Chat() {
           </div>
         ) : (
           <>
-            {/* Header conversation */}
             <div className="chat-header">
               <Avatar user={activePeer} size={40} online={isPeerOnline} />
               <div className="chat-header-info">
@@ -439,7 +426,6 @@ export default function Chat() {
               </button>
             </div>
 
-            {/* Messages */}
             <div className="chat-messages">
               {loadingMsgs ? (
                 <div className="chat-messages-loading">
@@ -502,7 +488,6 @@ export default function Chat() {
                     )
                   )}
 
-                  {/* Typing indicator */}
                   {typingFrom && typingFrom !== currentUserId && (
                     <div className="chat-msg-wrap chat-msg-theirs">
                       <Avatar user={activePeer} size={28} />
@@ -518,7 +503,6 @@ export default function Chat() {
               )}
             </div>
 
-            {/* Input */}
             <div className="chat-input-area">
               {showEmojiPicker && (
                 <div style={{ position: "absolute", bottom: 74, right: 94, background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, boxShadow: "0 12px 28px rgba(15,23,42,0.15)", padding: 10, display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, zIndex: 20 }}>
