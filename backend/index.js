@@ -135,28 +135,40 @@ app.use("/api/ratings",      ratingRoute);
 // ── MongoDB + Start ───────────────────────────────────────────────────────
 const port = process.env.PORT || 5000;
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("MongoDB Atlas connected ✅");
-    server.listen(port, () => {
-      console.log(`Server running on port: ${port} 🚀`);
+app.get("/", (req, res) => {
+  res.send("serveur is running");
+}); 
 
-      // ── CRON: Mark expired trips as "completed" every 10 minutes ──────
-      const tripModel = require("./Models/Tripmodel");
-      setInterval(async () => {
-        try {
-          const now = new Date();
-          const result = await tripModel.updateMany(
-            { status: "active", date: { $lt: now } },
-            { $set: { status: "completed" } }
-          );
-          if (result.modifiedCount > 0) {
-            console.log(`⏰ ${result.modifiedCount} trajet(s) marqué(s) comme complétés`);
+if (process.env.NODE_ENV !== "test") {
+  mongoose.connect(process.env.MONGO_URI)
+    .then(() => {
+      console.log("MongoDB Atlas connected ✅");
+
+      server.listen(port, () => {
+        console.log(`Server running on port: ${port} 🚀`);
+
+        const tripModel = require("./Models/Tripmodel");
+
+        setInterval(async () => {
+          try {
+            const now = new Date();
+
+            const result = await tripModel.updateMany(
+              { status: "active", date: { $lt: now } },
+              { $set: { status: "completed" } }
+            );
+
+            if (result.modifiedCount > 0) {
+              console.log(
+                `⏰ ${result.modifiedCount} trajet(s) marqué(s) comme complétés`
+              );
+            }
+          } catch (err) {
+            console.error("Cron error:", err);
           }
-        } catch (err) {
-          console.error("Cron error:", err);
-        }
-      }, 10 * 60 * 1000); // every 10 minutes
-    });
-  })
-  .catch(err => console.log("MongoDB connection error ❌", err));
+        }, 10 * 60 * 1000);
+
+      });
+    })
+    .catch(err => console.log("MongoDB connection error ❌", err));
+}module.exports = { app, server };

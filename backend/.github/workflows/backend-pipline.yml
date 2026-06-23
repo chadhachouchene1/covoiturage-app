@@ -1,0 +1,15 @@
+name: backend-pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    
+      - name: Check Node version
+        run: node --version
