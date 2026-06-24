@@ -10,5 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check Node version
-        run: node --version
+      - name: clone code repository
+        uses: actions/checkout@v6
+      - name : intall dependencies
+        run: npm install
+
+      - name: run unit tests
+        run: npm test
