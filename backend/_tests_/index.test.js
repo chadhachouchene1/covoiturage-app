@@ -1,14 +1,3 @@
-// Mock AWS avant tout require !
-jest.mock('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn().mockImplementation(() => ({})),
-  PutObjectCommand: jest.fn(),
-  DeleteObjectCommand: jest.fn(),
-}));
-
-jest.mock('multer-s3', () => () => ({
-  _handleFile: jest.fn(),
-  _removeFile: jest.fn(),
-}));
 
 const request = require('supertest');
 const { app } = require('../index');

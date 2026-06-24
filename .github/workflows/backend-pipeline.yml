@@ -12,7 +12,8 @@ jobs:
     steps:
       - name: clone code repository
         uses: actions/checkout@v4
-      - name : intall dependencies
+
+      - name: install dependencies
         run: npm install
         working-directory: ./backend
 
@@ -20,6 +21,14 @@ jobs:
         run: npm test
         working-directory: ./backend
         env:
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          AWS_BUCKET_NAME: ${{ vars.AWS_BUCKET_NAME }}
-          CLIENT_URL: ${{ vars.CLIENT_URL }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+          CLIENT_URL: ${{ secrets.CLIENT_URL }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
