@@ -19,3 +19,7 @@ jobs:
       - name: run unit tests
         run: npm test
         working-directory: ./backend
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_BUCKET_NAME: ${{ vars.AWS_BUCKET_NAME }}
+          CLIENT_URL: ${{ vars.CLIENT_URL }}
