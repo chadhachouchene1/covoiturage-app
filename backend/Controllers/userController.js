@@ -2,22 +2,17 @@ const userModel = require("../Models/userModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const validator = require("validator");
-
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const path = require("path");
 const { sendOTPEmail, verifyOTP } = require("../Otpservice");
 
-// ─── Multer (image upload) ────────────────────────────────────────────────────
-const multer    = require("multer");
-const multerS3  = require("multer-s3");
-const { S3Client } = require("@aws-sdk/client-s3");
-const path      = require("path");
-
-const s3 = new S3Client({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId:     process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    sessionToken:    process.env.AWS_SESSION_TOKEN,
-  },
+// ─── Cloudinary config ────────────────────────────────────────────────────────
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key:    process.env.CLOUDINARY_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET,
 });
 
 const fileFilter = (req, file, cb) => {
@@ -27,11 +22,12 @@ const fileFilter = (req, file, cb) => {
   cb(ext && mime ? null : new Error("Only images are allowed"), ext && mime);
 };
 
-const storage = multerS3({
-  s3,
-  bucket: process.env.AWS_BUCKET_NAME,
-  metadata: (req, file, cb) => cb(null, { fieldName: file.fieldname }),
-  key: (req, file, cb) => cb(null, `users/${Date.now()}-${file.originalname.replace(/\s/g, "_")}`),
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "covoiturage/users",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
+  },
 });
 
 const upload = multer({ storage, fileFilter, limits: { fileSize: 3 * 1024 * 1024 } });
@@ -94,7 +90,7 @@ const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const imagePath = req.file ? req.file.location : "";
+    const imagePath = req.file ? req.file.path : "";
 
     const newUser = await userModel.create({
       firstName, lastName, dateOfBirth, birthPlace,
@@ -178,18 +174,16 @@ const getUsers = async (req, res) => {
   }
 };
 
-// ─── FORGOT PASSWORD — Envoyer OTP reset ─────────────────────────────────────
+// ─── FORGOT PASSWORD ──────────────────────────────────────────────────────────
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: "Email requis" });
     if (!validator.isEmail(email)) return res.status(400).json({ message: "Format email invalide" });
 
-    // Vérifier que l'email existe en base
     const user = await userModel.findOne({ email });
     if (!user) return res.status(404).json({ message: "Aucun compte associé à cet email" });
 
-    // Envoyer OTP
     await sendOTPEmail(email, user.firstName);
     res.status(200).json({ message: "Code de réinitialisation envoyé ✅" });
   } catch (error) {
@@ -198,7 +192,7 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-// ─── RESET PASSWORD — Changer le mot de passe ────────────────────────────────
+// ─── RESET PASSWORD ───────────────────────────────────────────────────────────
 const resetPassword = async (req, res) => {
   try {
     const { email, newPassword } = req.body;
@@ -251,7 +245,7 @@ const updateMyProfile = async (req, res) => {
     }
 
     if (req.file) {
-      user.image = req.file.location;
+      user.image = req.file.path;
     }
 
     await user.save();

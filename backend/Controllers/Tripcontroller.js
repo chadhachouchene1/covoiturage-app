@@ -1,21 +1,18 @@
 const tripModel        = require("../Models/Tripmodel");
 const reservationModel = require("../Models/Reservationmodel");
 const userModel        = require("../Models/userModel");
-
 const { sendTripEmail } = require("../Emailservice");
-
 const multer           = require("multer");
-const multerS3         = require("multer-s3");
-const { S3Client }     = require("@aws-sdk/client-s3");
+const cloudinary       = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const path             = require("path");
+const jwt              = require("jsonwebtoken");
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId:     process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    sessionToken:    process.env.AWS_SESSION_TOKEN,
-  },
+// ─── Cloudinary config ────────────────────────────────────────────────────────
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key:    process.env.CLOUDINARY_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET,
 });
 
 const fileFilter = (req, file, cb) => {
@@ -25,16 +22,17 @@ const fileFilter = (req, file, cb) => {
   cb(ok ? null : new Error("Images only"), ok);
 };
 
-const storage = multerS3({
-  s3,
-  bucket: process.env.AWS_BUCKET_NAME,
-  metadata: (req, file, cb) => cb(null, { fieldName: file.fieldname }),
-  key: (req, file, cb) => cb(null, `trips/${Date.now()}-${file.originalname.replace(/\s/g, "_")}`),
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "covoiturage/trips",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
+  },
 });
 
 const uploadCar = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
-const jwt = require("jsonwebtoken");
 
+// ─── Auth middleware ───────────────────────────────────────────────────────────
 const protect = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ message: "Non authentifié" });
@@ -55,7 +53,7 @@ const createTrip = async (req, res) => {
     if (new Date(date) < new Date())
       return res.status(400).json({ message: "La date du trajet ne peut pas être dans le passé" });
 
-    const carImage = req.file ? req.file.location : "";
+    const carImage = req.file ? req.file.path : "";
     const trip = await tripModel.create({
       driver: req.userId, departure: departure.trim(), destination: destination.trim(),
       date, time, carImage, licensePlate, price: Number(price), seats: Number(seats),
@@ -75,8 +73,6 @@ const getAllTrips = async (req, res) => {
     const { departure, destination, date, minPrice, maxPrice, driver, includeAllStatuses } = req.query;
     const filter = {};
 
-    // Home page should only show active trips with seats.
-    // Driver profile can opt in to see all publications (including completed/cancelled).
     if (includeAllStatuses !== "true") {
       filter.status = "active";
       filter.availableSeats = { $gt: 0 };
@@ -123,7 +119,6 @@ const getMyTrips = async (req, res) => {
   }
 };
 
-// FIX: Block cancellation if any passenger has paid
 const cancelTrip = async (req, res) => {
   try {
     const trip = await tripModel.findById(req.params.id);
@@ -131,7 +126,6 @@ const cancelTrip = async (req, res) => {
     if (trip.driver.toString() !== req.userId) return res.status(403).json({ message: "Non autorisé" });
     if (trip.status === "cancelled") return res.status(400).json({ message: "Ce trajet est déjà annulé" });
 
-    // Block if any paid reservations exist
     const paidCount = await reservationModel.countDocuments({
       trip: trip._id, paymentStatus: "paid", status: { $nin: ["cancelled"] },
     });
