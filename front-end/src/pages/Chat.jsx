@@ -13,7 +13,8 @@ const QUICK_EMOJIS = ["😀", "😂", "😍", "👍", "🙏", "🔥", "🎉", "�
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const getToken  = () => localStorage.getItem("Token");
 const avatarUrl = (img) => img ? img : null;
-
+// Ajoute cet état en haut
+const [mobileConvOpen, setMobileConvOpen] = useState(false);
 const Avatar = ({ user, size = 40, online = false }) => {
   const initials = `${user?.firstName?.[0] || ""}${user?.lastName?.[0] || ""}`.toUpperCase();
   const src = avatarUrl(user?.image);
@@ -193,6 +194,7 @@ export default function Chat() {
 
   // ── Charger les messages ──────────────────────────────────────────────
   const loadMessages = async (convId) => {
+    setMobileConvOpen(true);
     setLoadingMsgs(true);
     setMessages([]);
     try {
@@ -326,7 +328,7 @@ export default function Chat() {
   })();
 
   return (
-    <div className="chat-root">
+    <div className={`chat-root${mobileConvOpen ? " chat-conv-open" : ""}`}>
 
       {/* ── Sidebar ────────────────────────────────────────────────────── */}
       <aside className="chat-sidebar">
@@ -414,6 +416,18 @@ export default function Chat() {
         ) : (
           <>
             <div className="chat-header">
+               {/* Bouton retour mobile */}
+  <button
+    onClick={() => setMobileConvOpen(false)}
+    style={{
+      display: "none",
+      background: "none", border: "none", cursor: "pointer",
+      fontSize: 20, marginRight: 4, color: "#1A56DB"
+    }}
+    className="chat-back-btn"
+  >
+    ←
+  </button>
               <Avatar user={activePeer} size={40} online={isPeerOnline} />
               <div className="chat-header-info">
                 <span className="chat-header-name">{activePeer?.firstName} {activePeer?.lastName}</span>

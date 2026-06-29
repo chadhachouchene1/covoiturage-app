@@ -23,28 +23,28 @@ function App() {
   const { user } = useContext(AuthContext);
 
   return (
-    <div style={{ height: "100vh", overflow: "hidden", background: "#0f0a1e" }}>
+    <div style={{ minHeight: "100vh", background: "#0f0a1e" }}>
       <NavBar />
-      <div style={{ height: "calc(100vh - 64px)", overflowY: "auto", overflowX: "hidden" }}>
+      <div style={{ overflowX: "hidden" }}>
         <Routes>
           {/* Public */}
           <Route path="/" element={user ? <Home /> : <Landing />} />
-          <Route path="/login"                  element={user ? <Navigate to="/" /> : <Login />} />
-          <Route path="/register"               element={user ? <Navigate to="/" /> : <Register />} />
-          <Route path="/forgot-password"        element={<ForgotPassword />} />
-          <Route path="/trips/:id"              element={<TripDetail />} />
-          <Route path="/profile/:userId"        element={<Profile />} />
-          <Route path="/search-users"           element={<UserSearch />} />
-          <Route path="/support"               element={<Support />} />
+          <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+          <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/trips/:id" element={<TripDetail />} />
+          <Route path="/profile/:userId" element={<Profile />} />
+          <Route path="/search-users" element={<UserSearch />} />
+          <Route path="/support" element={<Support />} />
 
           {/* Protected */}
-          <Route path="/profile"                element={user ? <Profile /> : <Navigate to="/login" />} />
-          <Route path="/publish-trip"           element={user ? <PublishTrip /> : <Navigate to="/login" />} />
-          <Route path="/my-reservations"        element={user ? <MyReservations /> : <Navigate to="/login" />} />
-          <Route path="/payment-success/:id"    element={user ? <PaymentSuccess /> : <Navigate to="/login" />} />
-          <Route path="/chat"                   element={user ? <Chat /> : <Navigate to="/login" />} />
-          <Route path="/settings"               element={user ? <Settings /> : <Navigate to="/login" />} />
-          <Route path="/*"                      element={<Navigate to="/" />} />
+          <Route path="/profile" element={user ? <Profile /> : <Navigate to="/login" />} />
+          <Route path="/publish-trip" element={user ? <PublishTrip /> : <Navigate to="/login" />} />
+          <Route path="/my-reservations" element={user ? <MyReservations /> : <Navigate to="/login" />} />
+          <Route path="/payment-success/:id" element={user ? <PaymentSuccess /> : <Navigate to="/login" />} />
+          <Route path="/chat" element={user ? <Chat /> : <Navigate to="/login" />} />
+          <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" />} />
+          <Route path="/*" element={<Navigate to="/" />} />
         </Routes>
       </div>
     </div>
