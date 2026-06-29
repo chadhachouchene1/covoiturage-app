@@ -271,11 +271,17 @@ export default function Home() {
             <div className="search-divider" />
             <div className="search-field">
               <span className="search-icon">📅</span>
-              <input
-                type="date"
-                value={filters.date}
-                onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-              />
+             <input
+  type="date"
+  placeholder="Date"
+  value={filters.date}
+  onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+  style={{ minWidth: "100px" }}
+/>
+Dis-moi quand c'est fait et montre-moi un nouveau screenshot ! 🚀
+
+
+
             </div>
             <button type="submit" className="search-btn">Rechercher</button>
           </form>
