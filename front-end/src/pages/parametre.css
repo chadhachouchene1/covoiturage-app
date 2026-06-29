@@ -283,3 +283,14 @@
     width: 100%;
   }
 }
+@media (max-width: 640px) {
+  .settings-hero-inner { padding: 1.2rem 1rem; }
+  .settings-title { font-size: 1.3rem; }
+  .settings-wrap { padding: 1rem 0.8rem 3rem; }
+  .settings-card { padding: 1rem; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .settings-row { flex-direction: column; }
+  .settings-row .settings-btn { width: 100%; }
+  .settings-actions { flex-direction: column; }
+  .settings-btn { width: 100%; }
+}

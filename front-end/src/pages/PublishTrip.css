@@ -296,3 +296,28 @@
   .form-row { grid-template-columns: 1fr; }
   .publish-form { padding: 1.2rem 1.2rem 2rem; }
 }
+@media (max-width: 600px) {
+  .publish-page { padding: 0 0 3rem; }
+  
+  .publish-card { border-radius: 0; box-shadow: none; }
+  
+  .publish-header { padding: 1.2rem 1rem; }
+  .publish-title { font-size: 1.3rem; }
+  
+  .publish-form { padding: 1rem; }
+  
+  .form-row { grid-template-columns: 1fr; gap: 0; }
+  
+  /* Fix date/time sur iOS */
+  .form-field input[type="date"],
+  .form-field input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 44px;
+    color: #0C1220;
+  }
+
+  .seat-btn { width: 36px; height: 36px; font-size: 13px; }
+  
+  .btn-publish { padding: 14px; font-size: 0.95rem; }
+}
