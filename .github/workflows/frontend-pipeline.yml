@@ -54,7 +54,9 @@ jobs:
             set -e
 
             cd ~/svc_core/devops-script
-            sleep 5
+
+            docker-compose down --remove-orphans || true
 
             docker pull chouchenechadha/covoiturage-frontend:latest
-            docker-compose up -d frontend
+
+            docker-compose up -d --force-recreate
