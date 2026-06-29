@@ -80,6 +80,6 @@ jobs:
             cd ~/svc_core/devops-script
 
             docker pull chouchenechadha/covoiturage-backend:latest
-            docker compose up -d backend
+            docker-compose up -d backend
 
             sudo systemctl restart svcpro

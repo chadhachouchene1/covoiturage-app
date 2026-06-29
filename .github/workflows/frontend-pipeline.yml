@@ -56,6 +56,6 @@ jobs:
             cd ~/svc_core/devops-script
 
             docker pull chouchenechadha/covoiturage-frontend:latest
-            docker compose up -d frontend
+            docker-compose up -d frontend
 
             sudo systemctl restart svcproo
