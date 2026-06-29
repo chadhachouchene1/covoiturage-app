@@ -46,7 +46,7 @@ const UserSearchBar = () => {
       {open && results.length > 0 && (
         <div className="user-search-dropdown">
           {results.map((u) => {
-            const avatarSrc = user.image || null;
+            const avatarSrc = u.image || null;
             const initials  = `${u.firstName?.[0] || ""}${u.lastName?.[0] || ""}`.toUpperCase();
             return (
               <Link
