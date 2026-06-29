@@ -13,8 +13,7 @@ const QUICK_EMOJIS = ["😀", "😂", "😍", "👍", "🙏", "🔥", "🎉", "�
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const getToken  = () => localStorage.getItem("Token");
 const avatarUrl = (img) => img ? img : null;
-// Ajoute cet état en haut
-const [mobileConvOpen, setMobileConvOpen] = useState(false);
+
 const Avatar = ({ user, size = 40, online = false }) => {
   const initials = `${user?.firstName?.[0] || ""}${user?.lastName?.[0] || ""}`.toUpperCase();
   const src = avatarUrl(user?.image);
@@ -42,6 +41,8 @@ const formatTime = (date) => {
 
 // ── Composant principal ───────────────────────────────────────────────────────
 export default function Chat() {
+  // Ajoute cet état en haut
+  const [mobileConvOpen, setMobileConvOpen] = useState(false);
   const { user } = useContext(AuthContext);
   const currentUserId = user?.id || user?._id;
   const navigate = useNavigate();
