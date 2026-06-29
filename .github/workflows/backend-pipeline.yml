@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
 
 jobs:
   unit-tests:
@@ -72,9 +75,11 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
+
             cd ~/svc_core/devops-script
-            sudo systemctl stop svcpro
-            docker-compose down
+
             docker pull chouchenechadha/covoiturage-backend:latest
-            docker-compose up -d
-            sudo systemctl start svcpro
+            docker compose up -d backend
+
+            sudo systemctl restart svcpro
