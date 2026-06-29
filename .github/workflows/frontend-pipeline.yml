@@ -50,5 +50,7 @@ jobs:
           script: |
             cd ~/svc_core/devops-script
             sudo systemctl stop svcpro
+            docker-compose down
             docker pull chouchenechadha/covoiturage-frontend:latest
+            docker-compose up -d
             sudo systemctl start svcpro
