@@ -278,7 +278,7 @@ export default function Home() {
   onChange={(e) => setFilters({ ...filters, date: e.target.value })}
   style={{ minWidth: "100px" }}
 />
-Dis-moi quand c'est fait et montre-moi un nouveau screenshot ! 🚀
+
 
 
 
