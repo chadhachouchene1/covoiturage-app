@@ -75,11 +75,12 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            set -e
+             set -e
 
-            cd ~/svc_core/devops-script
+             cd ~/svc_core/devops-script
+             sleep 5
 
-            docker pull chouchenechadha/covoiturage-backend:latest
-            docker-compose up -d backend
+              docker pull chouchenechadha/covoiturage-backend:latest
+              docker-compose up -d backend
 
-            sudo systemctl restart svcpro
+              sudo systemctl restart svcpro
