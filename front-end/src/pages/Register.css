@@ -301,3 +301,68 @@
   .rg-body  { padding: 18px 20px; }
   .rg-title { font-size: 1.25rem; }
 }
+
+@media (max-width: 560px) {
+  .rg-page {
+    padding: 12px 8px;
+    align-items: flex-start;
+  }
+
+  .rg-card {
+    border-radius: 16px;
+    max-width: 100%;
+  }
+
+  .rg-header {
+    padding: 10px 14px;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .rg-brand-logo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .rg-body {
+    padding: 16px 14px;
+  }
+
+  .rg-title {
+    font-size: 1.15rem;
+  }
+
+  .rg-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .rg-otp-box {
+    width: 48px;
+    height: 54px;
+    font-size: 1.4rem;
+  }
+
+  .rg-otp-wrap {
+    gap: 8px;
+  }
+
+  .rg-stepper {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rg-step-line {
+    width: 16px;
+  }
+
+  .rg-rules-box {
+    max-height: 200px;
+  }
+
+  .rg-btn {
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+}
