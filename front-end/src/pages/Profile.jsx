@@ -4,6 +4,8 @@ import { AuthContext } from "../context/AuthContext";
 import { TripContext } from "../context/TripContext";
 import { baseUrl } from "../utils/services";
 import "./Profile.css";
+import ImageLightbox from "../components/ImageLightbox";
+
 
 
 const statusConfig = {
@@ -166,6 +168,8 @@ export default function Profile() {
   const [loading, setLoading]     = useState(true);
   const [cancelMsg, setCancelMsg] = useState(null);
   const [activeTab, setActiveTab] = useState("trips");
+  const [lightboxSrc, setLightboxSrc] = useState(null);
+
 
   useEffect(() => {
     const load = async () => {
@@ -224,8 +228,17 @@ export default function Profile() {
         <div className="cover-bg" /><div className="cover-overlay" />
         <div className="cover-content">
           <div className="profile-avatar-wrap">
-            {avatarSrc ? <img src={avatarSrc} alt={fullName} className="profile-avatar" />
-              : <div className="profile-avatar-init">{initials || "?"}</div>}
+            {avatarSrc ? (
+  <img
+    src={avatarSrc}
+    alt={fullName}
+    className="profile-avatar"
+    onClick={() => setLightboxSrc(avatarSrc)}
+    style={{ cursor: "zoom-in" }}
+  />
+) : (
+  <div className="profile-avatar-init">{initials || "?"}</div>
+)}
             {isOwnProfile && <div className="avatar-online-dot" />}
           </div>
           <div className="profile-info">
@@ -314,8 +327,17 @@ export default function Profile() {
               <div className="profile-trips-list">
                 {trips.map(trip => (
                   <div key={trip._id} className="profile-trip-card">
-                    {trip.carImage ? <img src={trip.carImage} alt="car" className="ptc-car-img" />
-                      : <div className="ptc-car-placeholder">🚗</div>}
+                    {trip.carImage ? (
+  <img
+    src={trip.carImage}
+    alt="car"
+    className="ptc-car-img"
+    onClick={() => setLightboxSrc(trip.carImage)}
+    style={{ cursor: "zoom-in" }}
+  />
+) : (
+  <div className="ptc-car-placeholder">🚗</div>
+)}
                     <div className="ptc-body">
                       <div className="ptc-route">
                         <span className="ptc-city">{trip.departure}</span>
@@ -351,6 +373,11 @@ export default function Profile() {
           )}
         </main>
       </div>
+       {lightboxSrc && (
+        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+      )}
+
+
     </div>
   );
 }

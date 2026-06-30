@@ -5,7 +5,7 @@ import { TripContext } from "../context/TripContext";
 import { baseUrl } from "../utils/services";
 import "./TripDetail.css";
 
-
+import ImageLightbox from "../components/ImageLightbox";
 
 export default function TripDetail() {
   const { id } = useParams();
@@ -20,6 +20,8 @@ export default function TripDetail() {
   const [reserveLoading, setReserveLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState(null);
+
 
   useEffect(() => {
     const load = async () => {
@@ -68,7 +70,9 @@ export default function TripDetail() {
       {/* ── Hero ──────────────────────────────────────────────────── */}
       <div className="td-hero">
         {trip.carImage
-          ? <img src={trip.carImage} alt="voiture" className="td-hero-img" />
+          ? <img src={trip.carImage}  alt="voiture" 
+          onClick={() => setLightboxSrc(trip.carImage)}
+  style={{ cursor: "zoom-in"}}  className="td-hero-img" />
           : <div className="td-hero-placeholder">🚗</div>}
         <div className="td-hero-overlay" />
         <div className="td-hero-content">
@@ -242,6 +246,12 @@ export default function TripDetail() {
           </div>
         </div>
       </div>
+      {lightboxSrc && (
+        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+      )}
+      
     </div>
   );
 }
+
+
