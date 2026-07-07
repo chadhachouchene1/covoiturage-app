@@ -6,6 +6,8 @@ const http       = require("http");
 const { Server } = require("socket.io");
 require("dotenv").config();
 const supportRoute = require("./Routes/supportRoute");
+const chatbotRoute = require("./Routes/chatbotRoute");
+
 
 
 const app    = express();
@@ -131,6 +133,7 @@ app.use("/api/trips",        tripRoute);
 app.use("/api/reservations", reservationRoute);
 app.use("/api/chat",         chatRoute);
 app.use("/api/ratings",      ratingRoute);
+app.use("/api/chatbot", chatbotRoute);
 
 // ── MongoDB + Start ───────────────────────────────────────────────────────
 const port = process.env.PORT || 5000;

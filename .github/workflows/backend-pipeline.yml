@@ -35,6 +35,7 @@ jobs:
           CLOUDINARY_NAME: ${{ secrets.CLOUDINARY_NAME }}
           CLOUDINARY_KEY: ${{ secrets.CLOUDINARY_KEY }}
           CLOUDINARY_SECRET: ${{ secrets.CLOUDINARY_SECRET }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
   build-and-push:
     runs-on: self-hosted
@@ -68,22 +69,8 @@ jobs:
     needs: build-and-push
 
     steps:
-      - name: collect via ssh and deploy
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-             set -e
-
-              cd ~/svc_core/devops-script
-              sleep 5
-
-              docker-compose down --remove-orphans || true
-
-              docker pull chouchenechadha/covoiturage-backend:latest
-
-              docker-compose up -d --force-recreate backend
-
-              sudo systemctl restart svcpro
+      - name: deploy backend
+        run: |
+          cd ~/svc_core/devops-script
+          docker pull chouchenechadha/covoiturage-backend:latest
+          sudo systemctl restart svcpro

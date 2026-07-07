@@ -18,6 +18,8 @@ import Support         from "./pages/Support.jsx";
 import NavBar          from "./components/NavBar.jsx";
 import { useContext }  from "react";
 import { AuthContext } from "./context/AuthContext.jsx";
+import Chatbot from "./components/Chatbot";
+
 
 function App() {
   const { user } = useContext(AuthContext);
@@ -25,6 +27,8 @@ function App() {
   return (
     <div style={{ minHeight: "100vh", background: "#0f0a1e" }}>
       <NavBar />
+      <Chatbot />
+
       <div style={{ overflowX: "hidden" }}>
         <Routes>
           {/* Public */}

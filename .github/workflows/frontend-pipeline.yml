@@ -44,19 +44,10 @@ jobs:
     needs: build-and-push
 
     steps:
-      - name: deploy via ssh
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -e
-
-            cd ~/svc_core/devops-script
-
-            docker-compose down --remove-orphans || true
-
-            docker pull chouchenechadha/covoiturage-frontend:latest
-
-            docker-compose up -d --force-recreate
+      - name: deploy frontend
+        run: |
+          cd ~/svc_core/devops-script
+          docker pull chouchenechadha/covoiturage-frontend:latest
+          sudo systemctl stop svcpro
+          sleep 5
+          sudo systemctl start svcpro
