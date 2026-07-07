@@ -9,10 +9,9 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 router.post("/", async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, history = [] } = req.body;
     if (!message) return res.status(400).json({ message: "Message requis" });
 
-    // ── Récupère les données depuis MongoDB ──
     const [users, trips, ratings] = await Promise.all([
       userModel.find().select("firstName lastName image role").limit(20),
       tripModel.find({ status: "active" })
@@ -21,17 +20,12 @@ router.post("/", async (req, res) => {
         .sort({ date: 1 })
         .limit(15),
       ratingModel.aggregate([
-        { $group: {
-          _id: "$reviewedId",
-          avgRating: { $avg: "$stars" },
-          count: { $sum: 1 }
-        }},
+        { $group: { _id: "$reviewedId", avgRating: { $avg: "$stars" }, count: { $sum: 1 } } },
         { $sort: { avgRating: -1 } },
         { $limit: 5 }
       ])
     ]);
 
-    // ── Prix moyens par trajet populaires ──
     const popularRoutes = await tripModel.aggregate([
       { $group: {
         _id: { departure: "$departure", destination: "$destination" },
@@ -44,7 +38,6 @@ router.post("/", async (req, res) => {
       { $limit: 10 }
     ]);
 
-    // ── Conducteurs les mieux notés ──
     const topDrivers = await Promise.all(
       ratings.map(async (r) => {
         const user = await userModel.findById(r._id).select("firstName lastName");
@@ -56,14 +49,13 @@ router.post("/", async (req, res) => {
       })
     );
 
-    // ── Contexte pour le chatbot ──
     const context = `
 DONNÉES TAWSILA EN TEMPS RÉEL :
 
 👥 Membres inscrits : ${users.length}+
 
-🚗 Trajets actifs disponibles :
-${trips.map(t => `- ${t.departure} → ${t.destination} | ${new Date(t.date).toLocaleDateString("fr-FR")} à ${t.time} | ${t.price} DT | ${t.availableSeats} places | Conducteur: ${t.driver?.firstName} ${t.driver?.lastName}`).join("\n")}
+🚗 Trajets actifs disponibles (direction exacte) :
+${trips.map(t => `- DÉPART: ${t.departure} | ARRIVÉE: ${t.destination} | Date: ${new Date(t.date).toLocaleDateString("fr-FR")} à ${t.time} | Prix: ${t.price} DT | Places dispo: ${t.availableSeats} | Conducteur: ${t.driver?.firstName} ${t.driver?.lastName}`).join("\n")}
 
 💰 Prix moyens par trajet (données réelles) :
 ${popularRoutes.map(r => `- ${r._id.departure} → ${r._id.destination} : moyenne ${r.avgPrice.toFixed(1)} DT (min ${r.minPrice} DT, max ${r.maxPrice} DT) - ${r.count} trajet(s)`).join("\n")}
@@ -95,11 +87,16 @@ Tu peux répondre aux questions sur :
 - Comment publier un trajet
 - Comment contacter un conducteur via le chat
 
-IMPORTANT : Utilise TOUJOURS les données réelles. Ne donne jamais de prix inventés.
-Si aucune donnée n'existe pour un trajet demandé, dis-le honnêtement.
+IMPORTANT SUR LES TRAJETS :
+- Le trajet "Sousse → Mahdia" est DIFFÉRENT de "Mahdia → Sousse"
+- Ne confonds JAMAIS la direction d'un trajet
+- Si un trajet n'existe pas dans cette direction exacte, dis-le clairement
+- Ne propose pas le trajet inverse sans le préciser explicitement
+- Utilise TOUJOURS les données réelles. Ne donne jamais de prix inventés.
 
 Sois court (max 4 phrases), amical et précis.`,
         },
+        ...history,
         { role: "user", content: message },
       ],
       max_tokens: 400,
