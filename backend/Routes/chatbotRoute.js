@@ -1,44 +1,87 @@
 const express = require("express");
 const router = express.Router();
 const Groq = require("groq-sdk");
+const userModel = require("../Models/userModel");
+const tripModel = require("../Models/Tripmodel");
+const ratingModel = require("../Models/Ratingmodel");
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 router.post("/", async (req, res) => {
   try {
     const { message } = req.body;
     if (!message) return res.status(400).json({ message: "Message requis" });
 
+    // ── Récupère les données depuis MongoDB ──
+    const [users, trips, ratings] = await Promise.all([
+      userModel.find().select("firstName lastName image role").limit(20),
+      tripModel.find({ status: "active" })
+        .populate("driver", "firstName lastName")
+        .select("departure destination date time price availableSeats driver")
+        .limit(20),
+      ratingModel.aggregate([
+        { $group: {
+          _id: "$reviewedId",
+          avgRating: { $avg: "$stars" },
+          count: { $sum: 1 }
+        }},
+        { $sort: { avgRating: -1 } },
+        { $limit: 5 }
+      ])
+    ]);
+
+    // ── Trouve les conducteurs les mieux notés ──
+    const topDrivers = await Promise.all(
+      ratings.map(async (r) => {
+        const user = await userModel.findById(r._id).select("firstName lastName");
+        return user ? {
+          name: `${user.firstName} ${user.lastName}`,
+          rating: r.avgRating.toFixed(1),
+          reviews: r.count
+        } : null;
+      })
+    );
+
+    // ── Contexte pour le chatbot ──
+    const context = `
+DONNÉES TAWSILA EN TEMPS RÉEL :
+
+👥 Membres inscrits : ${users.length}+
+
+🚗 Trajets actifs disponibles :
+${trips.map(t => `- ${t.departure} → ${t.destination} | ${new Date(t.date).toLocaleDateString("fr-FR")} | ${t.price} DT | ${t.availableSeats} places | Conducteur: ${t.driver?.firstName} ${t.driver?.lastName}`).join("\n")}
+
+⭐ Conducteurs les mieux notés :
+${topDrivers.filter(Boolean).map((d, i) => `${i+1}. ${d.name} - ${d.rating}/5 (${d.reviews} avis)`).join("\n")}
+    `;
+
     const completion = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: [
         {
           role: "system",
-          content: `Tu es Tawsila Assistant 🚗, un chatbot d'aide pour la plateforme de covoiturage Tawsila en Tunisie.
+          content: `Tu es Tawsila Assistant 🚗, chatbot de la plateforme de covoiturage Tawsila en Tunisie.
 
-LANGUE : Détecte automatiquement la langue de l'utilisateur et réponds dans la même langue :
-- Si l'utilisateur écrit en français → réponds en français
-- Si l'utilisateur écrit en arabe tunisien (darija) → réponds en darija tunisienne (ex: "ahlen", "kifech", "bech", "mrigel", "ya3tik essa7a")
-- Si l'utilisateur écrit en arabe classique → réponds en arabe classique
-- Si l'utilisateur écrit en anglais → réponds en anglais
+${context}
 
-Tu aides les utilisateurs à :
-- Réserver un trajet : aller sur Accueil, chercher départ/destination, cliquer Réserver
-- Publier un trajet : cliquer sur + Publier un trajet, remplir le formulaire
-- Utiliser le chat entre membres
-- Payer en ligne via Stripe
-- Contacter le support
+LANGUE : Détecte la langue de l'utilisateur et réponds dans la même langue.
+- Français → réponds en français
+- Darija tunisienne → réponds en darija (ex: "ahlen", "kifech", "bech", "mrigel")
+- Arabe classique → réponds en arabe
+- Anglais → réponds en anglais
 
-Sois toujours amical, court et utile.
-Si la question ne concerne pas Tawsila ou le covoiturage, dis poliment que tu ne peux aider que sur ces sujets.`,},
-        {
-          role: "user",
-          content: message,
+Tu peux répondre aux questions sur :
+- Les conducteurs les mieux notés
+- Les trajets disponibles
+- Comment réserver, publier un trajet
+- Comment contacter un conducteur (via le chat)
+- Les prix et villes disponibles
+
+Sois court, amical et utile. Max 3-4 phrases par réponse.`,
         },
+        { role: "user", content: message },
       ],
-      max_tokens: 300,
+      max_tokens: 400,
       temperature: 0.7,
     });
 
