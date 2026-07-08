@@ -89,10 +89,19 @@ export const AuthContextProvider = ({ children }) => {
   );
 
   // ---------------- LOGOUT ----------------
-  const logoutUser = useCallback(() => {
-    localStorage.removeItem("User");
-    setUser(null);
-  }, []);
+  const logoutUser = () => {
+  // Nettoie la conversation du chatbot
+  const keys = Object.keys(sessionStorage);
+  keys.forEach(key => {
+    if (key.startsWith("tawsila_chat_")) {
+      sessionStorage.removeItem(key);
+    }
+  });
+  
+  localStorage.removeItem("Token");
+  localStorage.removeItem("User");
+  setUser(null);
+};
 
   // ---------------- LOAD USER FROM LOCALSTORAGE ----------------
   useEffect(() => {

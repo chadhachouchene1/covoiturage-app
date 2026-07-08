@@ -70,11 +70,19 @@ export default function Chatbot() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
 
-  const clearChat = () => {
-    const initial = [{ role: "bot", text: "Ahlen! 👋 Ana Tawsila Assistant. Kifech najjem n3awnek?" }];
-    setMessages(initial);
-    sessionStorage.removeItem(storageKey);
-  };
+ const clearChat = () => {
+  const initial = [{ role: "bot", text: "Ahlen! 👋 Ana Tawsila Assistant. Kifech najjem n3awnek?" }];
+  setMessages(initial);
+  sessionStorage.removeItem(storageKey);
+};
+
+// ← Ajoute ici
+useEffect(() => {
+  const saved = sessionStorage.getItem(storageKey);
+  setMessages(saved ? JSON.parse(saved) : [
+    { role: "bot", text: "Ahlen! 👋 Ana Tawsila Assistant. Kifech najjem n3awnek?" }
+  ]);
+}, [userId]);
 
   return (
     <>
