@@ -27,7 +27,8 @@ function App() {
   return (
     <div style={{ minHeight: "100vh", background: "#0f0a1e" }}>
       <NavBar />
-      <Chatbot />
+     
+      {user && <Chatbot />}
 
       <div style={{ overflowX: "hidden" }}>
         <Routes>
