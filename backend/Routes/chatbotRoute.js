@@ -7,18 +7,53 @@ const ratingModel = require("../Models/Ratingmodel");
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+// ── Détecte les villes dans le message ──
+const extractCities = (msg) => {
+  const lower = msg.toLowerCase();
+  const cities = [
+    "tunis", "sousse", "sfax", "monastir", "mahdia", "nabeul",
+    "bizerte", "kairouan", "gabès", "gabes", "gafsa", "tozeur", "kebili",
+    "jerba", "hammamet", "tabarka", "beja", "jendouba", "siliana",
+    "zaghouan", "medenine", "tataouine", "monestir", "ariana", "manouba",
+    "ben arous", "zaghouan", "soliman", "grombalia", "kelibia"
+  ];
+  return cities.filter(c => lower.includes(c));
+};
+
 router.post("/", async (req, res) => {
   try {
     const { message, history = [] } = req.body;
     if (!message) return res.status(400).json({ message: "Message requis" });
 
+    // ── Détecte les villes mentionnées ──
+    const cities = extractCities(message);
+
+    // ── Query dynamique selon les villes détectées ──
+    let tripQuery = { status: "active" };
+
+    if (cities.length >= 2) {
+      tripQuery = {
+        status: "active",
+        departure: { $regex: cities[0], $options: "i" },
+        destination: { $regex: cities[1], $options: "i" },
+      };
+    } else if (cities.length === 1) {
+      tripQuery = {
+        status: "active",
+        $or: [
+          { departure: { $regex: cities[0], $options: "i" } },
+          { destination: { $regex: cities[0], $options: "i" } },
+        ]
+      };
+    }
+
     const [users, trips, ratings] = await Promise.all([
-      userModel.find().select("firstName lastName image role").limit(20),
-      tripModel.find({ status: "active" })
+      userModel.find().select("firstName lastName role").limit(20),
+      tripModel.find(tripQuery)
         .populate("driver", "firstName lastName")
         .select("departure destination date time price availableSeats driver")
         .sort({ date: 1 })
-        .limit(15),
+        .limit(10),
       ratingModel.aggregate([
         { $group: { _id: "$reviewedId", avgRating: { $avg: "$stars" }, count: { $sum: 1 } } },
         { $sort: { avgRating: -1 } },
@@ -54,11 +89,14 @@ DONNÉES TAWSILA EN TEMPS RÉEL :
 
 👥 Membres inscrits : ${users.length}+
 
-🚗 Trajets actifs disponibles (direction exacte) :
-${trips.map(t => `- DÉPART: ${t.departure} | ARRIVÉE: ${t.destination} | Date: ${new Date(t.date).toLocaleDateString("fr-FR")} à ${t.time} | Prix: ${t.price} DT | Places dispo: ${t.availableSeats} | Conducteur: ${t.driver?.firstName} ${t.driver?.lastName}`).join("\n")}
+🚗 Trajets trouvés (filtrés selon la demande) :
+${trips.length > 0
+  ? trips.map(t => `- DÉPART: ${t.departure} | ARRIVÉE: ${t.destination} | Date: ${new Date(t.date).toLocaleDateString("fr-FR")} à ${t.time} | Prix: ${t.price} DT | Places dispo: ${t.availableSeats} | Conducteur: ${t.driver?.firstName} ${t.driver?.lastName}`).join("\n")
+  : "Aucun trajet trouvé pour cette recherche."
+}
 
 💰 Prix moyens par trajet (données réelles) :
-${popularRoutes.map(r => `- ${r._id.departure} → ${r._id.destination} : moyenne ${r.avgPrice.toFixed(1)} DT (min ${r.minPrice} DT, max ${r.maxPrice} DT) - ${r.count} trajet(s)`).join("\n")}
+${popularRoutes.map(r => `- ${r._id.departure} → ${r._id.destination} : moyenne ${r.avgPrice.toFixed(1)} DT (min ${r.minPrice} DT, max ${r.maxPrice} DT)`).join("\n")}
 
 ⭐ Conducteurs les mieux notés :
 ${topDrivers.filter(Boolean).map((d, i) => `${i+1}. ${d.name} - ${d.rating}/5 (${d.reviews} avis)`).join("\n")}
@@ -75,24 +113,20 @@ ${context}
 
 LANGUE : Détecte la langue et réponds dans la même langue.
 - Français → réponds en français
-- Darija tunisienne → réponds en darija (ex: "ahlen", "kifech", "bech", "mrigel")
+- Darija tunisienne → réponds en darija
 - Arabe classique → réponds en arabe
 - Anglais → réponds en anglais
 
-Tu peux répondre aux questions sur :
-- Les conducteurs les mieux notés avec leurs vraies notes
-- Les trajets disponibles en temps réel
-- Estimation du coût basée sur les VRAIES données de prix
-- Comment réserver un trajet
-- Comment publier un trajet
-- Comment contacter un conducteur via le chat
+RÈGLES ABSOLUES SUR LES TRAJETS :
+- Utilise UNIQUEMENT les trajets fournis ci-dessus, ils sont déjà filtrés correctement
+- DÉPART et ARRIVÉE sont différents, ne les inverse JAMAIS
+- Si "Aucun trajet trouvé" → dis-le clairement
+- N'invente jamais de trajet ou de prix
 
-IMPORTANT SUR LES TRAJETS :
-- Le trajet "Sousse → Mahdia" est DIFFÉRENT de "Mahdia → Sousse"
-- Ne confonds JAMAIS la direction d'un trajet
-- Si un trajet n'existe pas dans cette direction exacte, dis-le clairement
-- Ne propose pas le trajet inverse sans le préciser explicitement
-- Utilise TOUJOURS les données réelles. Ne donne jamais de prix inventés.
+Tu peux aussi répondre sur :
+- Comment réserver un trajet
+- Comment publier un trajet  
+- Comment contacter un conducteur via le chat
 
 Sois court (max 4 phrases), amical et précis.`,
         },
@@ -100,7 +134,7 @@ Sois court (max 4 phrases), amical et précis.`,
         { role: "user", content: message },
       ],
       max_tokens: 400,
-      temperature: 0.5,
+      temperature: 0.3,
     });
 
     const reply = completion.choices[0].message.content;
